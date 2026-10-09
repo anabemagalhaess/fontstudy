@@ -550,7 +550,7 @@ export function FontManager() {
         <div className="header-main">
           <div className="brand-lockup"><span className="brand-mark">F</span><div><h1>Gestor de fontes</h1><p>Biblioteca tipográfica & estudos de identidade</p></div></div>
           <div className="header-actions">
-            <button className="primary-button" onClick={loadFonts}><Type /> Carregar fontes do Mac</button>
+<button className="primary-button cursor-button" onClick={loadFonts}><Type /> Carregar fontes do Mac</button>
             <label className="header-input"><span className="sr-only">Nome do cliente</span><input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Nome do cliente" /></label>
             <label className="header-input"><span className="sr-only">Tagline</span><input value={tagline} onChange={(event) => setTagline(event.target.value)} placeholder="Tagline" /></label>
             <button className="secondary-button" onClick={() => logoInput.current?.click()}><ImagePlus /> {logoData ? "Alterar logo" : "Adicionar logo"}</button>
@@ -562,8 +562,11 @@ export function FontManager() {
         </div>
 
         <div className="view-row">
-          <div className="view-tabs" role="tablist" aria-label="Modo de visualização">
-            {VIEW_OPTIONS.map((option) => <button key={option.id} role="tab" aria-selected={view === option.id} className={`view-tab${view === option.id ? " is-active" : ""}`} onClick={() => changeView(option.id)}>{option.label}</button>)}
+          <div className="view-modes" role="tablist" aria-label="Modo de visualização">
+            <div className="view-tabs">
+              {VIEW_OPTIONS.slice(0, 4).map((option) => <button key={option.id} role="tab" aria-selected={view === option.id} className={`view-tab${view === option.id ? " is-active" : ""}`} onClick={() => changeView(option.id)}>{option.label}</button>)}
+            </div>
+            {VIEW_OPTIONS.slice(4).map((option) => <button key={option.id} role="tab" aria-selected={view === option.id} className={`view-tab view-tab--study${view === option.id ? " is-active" : ""}`} onClick={() => changeView(option.id)}>{option.label}</button>)}
           </div>
           <button className="secondary-button theme-toggle" onClick={() => setDark((current) => !current)} aria-label={dark ? "Ativar modo claro" : "Ativar modo escuro"} title={dark ? "Modo claro" : "Modo escuro"}>{dark ? <Sun /> : <Moon />}<span>Claro/Escuro</span></button>
         </div>
@@ -623,7 +626,7 @@ export function FontManager() {
           {view === "study" && visibleItems.length === 0 ? (
             <div className="empty-state"><span className="empty-state__icon"><Heart /></span><h3>Ainda não há designs no Logo Study</h3><p>Escolhe uma fonte na biblioteca e marca o ícone de sorriso para a acrescentar a esta prancheta.</p><button className="secondary-button" onClick={() => changeView("grid")}>Voltar à biblioteca</button></div>
           ) : view !== "study" && !fonts.length && filter !== NOT_INSTALLED ? (
-            <div className="empty-state"><span className="empty-state__icon"><Type /></span><h3>Começa pelas fontes instaladas</h3><p>Carrega as fontes do teu computador para ver as famílias, atribuir estilos e criar combinações. Também podes classificar pastas para guardar referências de fontes não instaladas.</p><button className="primary-button" onClick={loadFonts}><Type /> Carregar fontes do Mac</button></div>
+            <div className="empty-state"><span className="empty-state__icon"><Type /></span><h3>Começa pelas fontes instaladas</h3><p>Carrega as fontes do teu computador para ver as famílias, atribuir estilos e criar combinações. Também podes classificar pastas para guardar referências de fontes não instaladas.</p><button className="primary-button cursor-button" onClick={loadFonts}><Type /> Carregar fontes do Mac</button></div>
           ) : visibleItems.length === 0 ? (
             <div className="empty-state empty-state--small"><h3>{filter === NOT_INSTALLED ? "Ainda não há fontes não instaladas" : "Nada por aqui"}</h3><p>{filter === NOT_INSTALLED ? "Usa Classificar para carregar uma pasta de fontes; os ficheiros sem correspondência com fontes instaladas aparecem aqui como referência." : "Experimenta outro filtro ou pesquisa. As composições Happy aparecem depois de guardares um coração num cartão."}</p></div>
           ) : (
