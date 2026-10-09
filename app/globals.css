@@ -164,7 +164,7 @@
 
 .font-app {
   --ink: #191b20;
-  --cursor-color: #c9d2bd;
+  --cursor-color: #e5e9df;
   --cursor-foreground: #373c33;
   --muted-ink: #727984;
   --line: #dce0e5;
@@ -190,7 +190,7 @@
 .font-app button, .font-app input, .font-app select { font: inherit; }
 .font-app button { color: inherit; }
 .font-app button:focus-visible, .font-app input:focus-visible, .font-app select:focus-visible { outline: 3px solid var(--cursor-color); outline-offset: 2px; }
-.font-app--dark { --ink: #f2f3f4; --muted-ink: #a5abb4; --line: #3a3e45; --paper: #202329; --subtle: #292d34; --cursor-color: #9ba88d; --cursor-foreground: #17191d; --mint: #8a9a7e; --mint-soft: #30372d; --guide-color: #8a9a7e; background: #17191d; }
+.font-app--dark { --ink: #f2f3f4; --muted-ink: #a5abb4; --line: #3a3e45; --paper: #202329; --subtle: #292d34; --cursor-color: #bbc4b0; --cursor-foreground: #242820; --mint: #8a9a7e; --mint-soft: #30372d; --guide-color: #8a9a7e; background: #17191d; }
 .font-app--dark .font-card, .font-app--dark .studio-canvas, .font-app--dark .manager-dialog { background: var(--paper); }
 .font-app--dark .header-input input, .font-app--dark .search-box input, .font-app--dark select, .font-app--dark .category-add input { background: var(--subtle); color: var(--ink); }
 .font-app--dark .lockup-preview__name, .font-app--dark .lockup-preview__tagline { color: var(--ink); }
