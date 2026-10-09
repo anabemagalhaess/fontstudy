@@ -13,6 +13,7 @@ export type FontLibrary = {
   tfont: string
   nfont: string
   combos: FavoriteCombo[]
+  uninstalledFonts?: FontFamily[]
   preferences?: {
     view: ViewMode
     filter: string

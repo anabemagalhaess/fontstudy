@@ -34,6 +34,7 @@ const VIEW_OPTIONS: ViewOption[] = [
 ]
 const INITIAL_LAYOUT: StudyLayout = { logoSize: 86, logoGap: 24, logoOffset: 0, taglineGap: 22, nameOffset: 0, taglineOffset: 0, margin: 52 }
 const INITIAL_STUDY_SETTINGS: StudySettings = { columns: 5, layout: INITIAL_LAYOUT, fontSize: 58, taglineSize: 24, fontWeight: 400 }
+const NOT_INSTALLED = "Não instaladas"
 const EMPTY_LIBRARY: FontLibrary = {
   app: "fontes-biblioteca",
   version: 1,
@@ -44,10 +45,12 @@ const EMPTY_LIBRARY: FontLibrary = {
   tfont: "",
   nfont: "",
   combos: [],
+  uninstalledFonts: [],
 }
 
 export function FontManager() {
   const [fonts, setFonts] = useState<FontFamily[]>([])
+  const [uninstalledFonts, setUninstalledFonts] = useState<FontFamily[]>([])
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
   const [tags, setTags] = useState<Record<string, string>>({})
   const [favorites, setFavorites] = useState<string[]>([])
@@ -91,6 +94,7 @@ export function FontManager() {
     setFavorites(Array.isArray(library.favs) ? library.favs : [])
     setTaglineFavorites(Array.isArray(library.tfavs) ? library.tfavs : [])
     setFavoriteCombos(Array.isArray(library.combos) ? library.combos : [])
+    setUninstalledFonts(Array.isArray(library.uninstalledFonts) ? library.uninstalledFonts : [])
     setTaglineFont(typeof library.tfont === "string" ? library.tfont : "")
     setNameFont(typeof library.nfont === "string" ? library.nfont : "")
     const preferences = library.preferences
@@ -205,6 +209,7 @@ export function FontManager() {
     tfont: taglineFont,
     nfont: nameFont,
     combos: favoriteCombos,
+    uninstalledFonts,
     preferences: {
       view,
       filter,
@@ -223,7 +228,7 @@ export function FontManager() {
       studioExpanded,
       studySettings,
     },
-  }), [categories, tags, favorites, taglineFavorites, taglineFont, nameFont, favoriteCombos, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded, studySettings])
+  }), [categories, tags, favorites, taglineFavorites, taglineFont, nameFont, favoriteCombos, uninstalledFonts, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded, studySettings])
 
   useEffect(() => {
     if (!hydrated) return
@@ -296,6 +301,13 @@ export function FontManager() {
         .map((combo) => ({ font: fontMap.get(combo.n), combo }))
         .filter((item): item is { font: FontFamily; combo: FavoriteCombo } => Boolean(item.font))
     }
+    if (filter === NOT_INSTALLED) {
+      const installedNames = new Set(fonts.map((font) => compactName(font.family)))
+      return uninstalledFonts
+        .filter((font) => !installedNames.has(compactName(font.family)))
+        .filter((font) => !normalizedQuery || font.family.toLocaleLowerCase("pt-PT").includes(normalizedQuery))
+        .map((font) => ({ font, combo: undefined }))
+    }
     return fonts.filter((font) => {
       if (normalizedQuery && !font.family.toLocaleLowerCase("pt-PT").includes(normalizedQuery)) return false
       if (filter === "Favoritos do nome") return favorites.includes(font.family)
@@ -304,7 +316,7 @@ export function FontManager() {
       if (filter !== "Todas") return categoryFor(font.family, tags, categories) === filter
       return true
     }).map((font) => ({ font, combo: undefined }))
-  }, [view, selectedFamilies, filter, favoriteCombos, normalizedQuery, fontMap, fonts, favorites, taglineFavorites, tags, categories])
+  }, [view, selectedFamilies, filter, favoriteCombos, normalizedQuery, fontMap, fonts, uninstalledFonts, favorites, taglineFavorites, tags, categories])
 
   const updateLibraryHandle = async (handle: LocalFontHandle) => {
     const permission = await handle.queryPermission({ mode: "readwrite" })
@@ -430,13 +442,10 @@ export function FontManager() {
 
   const importFolder = (files: FileList | null, selectedCategory?: string) => {
     if (!files?.length) return
-    if (!fonts.length) {
-      setNotice("Carrega primeiro as fontes instaladas. A classificação associa os ficheiros OTF/TTF a famílias existentes; não instala nem duplica fontes.")
-      return
-    }
     const categoryByName = new Map(categories.map((category) => [normalize(category), category]))
     const fontByName = [...fonts].sort((a, b) => compactName(b.family).length - compactName(a.family).length)
     const matchedFamilies = new Set<string>()
+    const nextUninstalledFonts = new Map(uninstalledFonts.map((font) => [compactName(font.family), font]))
     let unmatched = 0
     let scanned = 0
     const nextTags = { ...tags }
@@ -452,18 +461,32 @@ export function FontManager() {
         const installed = compactName(font.family)
         return installed === compactFamily || (installed.length >= 5 && compactFamily.startsWith(installed))
       })
-      if (!match || !folderCategory) { unmatched += 1; continue }
+      if (!match) {
+        unmatched += 1
+        if (familyName) {
+          const key = compactName(familyName)
+          const current = nextUninstalledFonts.get(key)
+          nextUninstalledFonts.set(key, current ?? { family: familyName, styles: [] })
+          nextTags[familyName] = folderCategory || nextTags[familyName] || UNCATEGORIZED
+        }
+        continue
+      }
+      if (!folderCategory) { unmatched += 1; continue }
       nextTags[match.family] = folderCategory
       matchedFamilies.add(match.family)
     }
     setTags(nextTags)
+    setUninstalledFonts([...nextUninstalledFonts.values()].sort((a, b) => a.family.localeCompare(b.family, "pt-PT")))
     const matched = matchedFamilies.size
+    const newlyUninstalled = [...nextUninstalledFonts.keys()].filter((key) => !uninstalledFonts.some((font) => compactName(font.family) === key)).length
     const destination = selectedCategory ? ` em “${selectedCategory}”` : " nas categorias correspondentes às pastas"
-    setNotice(matched
-      ? `${matched} família${matched === 1 ? " classificada" : "s classificadas"}${destination}. Foram lidos ${scanned} ficheiros OTF/TTF e não foram adicionadas fontes duplicadas.${unmatched ? ` ${unmatched} ficheiro(s) não corresponderam a uma família instalada ou categoria reconhecida.` : ""}`
-      : scanned === 0
-        ? "A pasta selecionada não contém ficheiros OTF ou TTF."
-        : "Não encontrei famílias instaladas correspondentes. Confirma os nomes dos ficheiros e, para uma pasta completa, os nomes das pastas de estilos.")
+    const resultParts = [
+      matched ? `${matched} família${matched === 1 ? " classificada" : "s classificadas"}${destination}` : "",
+      newlyUninstalled ? `${newlyUninstalled} família${newlyUninstalled === 1 ? " adicionada" : "s adicionadas"} a “${NOT_INSTALLED}”` : "",
+    ].filter(Boolean)
+    setNotice(scanned === 0
+      ? "A pasta selecionada não contém ficheiros OTF ou TTF."
+      : `${resultParts.join(". ") || "Nenhuma família nova encontrada"}. Foram lidos ${scanned} ficheiros OTF/TTF; as fontes não instaladas ficam guardadas como referência e não são instaladas.${unmatched > newlyUninstalled ? ` ${unmatched - newlyUninstalled} ficheiro(s) não corresponderam a uma família instalada nem acrescentaram uma família nova.` : ""}`)
   }
 
   const handleLogoFile = (file?: File) => {
@@ -497,9 +520,13 @@ export function FontManager() {
   const updateFontWeight = (value: number) => view === "study"
     ? setStudySettings((current) => ({ ...current, fontWeight: value }))
     : setFontWeight(value)
-  const categoryFilters = ["Todas", "Favoritos do nome", "Favoritos da tagline", "Composições", ...categories, UNCATEGORIZED]
+  const categoryFilters = ["Todas", "Favoritos do nome", "Favoritos da tagline", "Composições", ...categories, UNCATEGORIZED, NOT_INSTALLED]
   const chipCount = (item: string) => {
     if (item === "Todas") return fonts.length
+    if (item === NOT_INSTALLED) {
+      const installedNames = new Set(fonts.map((font) => compactName(font.family)))
+      return uninstalledFonts.filter((font) => !installedNames.has(compactName(font.family))).length
+    }
     if (item === "Favoritos do nome") return favorites.length
     if (item === "Favoritos da tagline") return taglineFavorites.length
     if (item === "Composições") return favoriteCombos.length
@@ -581,10 +608,10 @@ export function FontManager() {
 
           {view === "study" && visibleItems.length === 0 ? (
             <div className="empty-state"><span className="empty-state__icon"><Heart /></span><h3>Ainda não há designs no Logo Study</h3><p>Escolhe uma fonte na biblioteca e marca o ícone de sorriso para a acrescentar a esta prancheta.</p><button className="secondary-button" onClick={() => changeView("grid")}>Voltar à biblioteca</button></div>
-          ) : view !== "study" && !fonts.length ? (
-            <div className="empty-state"><span className="empty-state__icon"><Type /></span><h3>Começa pelas fontes instaladas</h3><p>Carrega as fontes do teu computador para ver as famílias, atribuir estilos e criar combinações. A leitura depende do Chrome ou Edge e da autorização do browser.</p><button className="primary-button" onClick={loadFonts}><Type /> Carregar fontes do Mac</button></div>
+          ) : view !== "study" && !fonts.length && filter !== NOT_INSTALLED ? (
+            <div className="empty-state"><span className="empty-state__icon"><Type /></span><h3>Começa pelas fontes instaladas</h3><p>Carrega as fontes do teu computador para ver as famílias, atribuir estilos e criar combinações. Também podes classificar pastas para guardar referências de fontes não instaladas.</p><button className="primary-button" onClick={loadFonts}><Type /> Carregar fontes do Mac</button></div>
           ) : visibleItems.length === 0 ? (
-            <div className="empty-state empty-state--small"><h3>Nada por aqui</h3><p>Experimenta outro filtro ou pesquisa. As composições Happy aparecem depois de guardares um coração num cartão.</p></div>
+            <div className="empty-state empty-state--small"><h3>{filter === NOT_INSTALLED ? "Ainda não há fontes não instaladas" : "Nada por aqui"}</h3><p>{filter === NOT_INSTALLED ? "Usa Classificar para carregar uma pasta de fontes; os ficheiros sem correspondência com fontes instaladas aparecem aqui como referência." : "Experimenta outro filtro ou pesquisa. As composições Happy aparecem depois de guardares um coração num cartão."}</p></div>
           ) : (
             <div className={`font-grid${view === "list" ? " font-grid--list" : ""}`} style={{ "--font-cols": activeColumns } as React.CSSProperties}>
               {visibleItems.map((item, index) => {
@@ -621,7 +648,7 @@ export function FontManager() {
               })}
             </div>
           )}
-          {view !== "study" && fonts.length > 0 && <div className="import-help"><FolderUp /><span>Organizaste as fontes em pastas por estilo? Carrega a pasta para classificar famílias já instaladas. A app associa nomes existentes, não instala nem duplica ficheiros.</span><button className="text-button" onClick={() => setClassifyOpen(true)}>Classificar</button></div>}
+          {view !== "study" && fonts.length > 0 && <div className="import-help"><FolderUp /><span>Carrega pastas por estilo para classificar fontes instaladas. Famílias sem correspondência ficam em “Não instaladas” como referência; os ficheiros não são instalados nem guardados.</span><button className="text-button" onClick={() => setClassifyOpen(true)}>Classificar</button></div>}
         </section>
         <footer className="app-footer"><span>Gestor de fontes</span><span>{libraryStatus}</span></footer>
       </main>
