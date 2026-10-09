@@ -173,7 +173,11 @@
   --mint: #bce7e2;
   --mint-soft: #eaf7f5;
   min-height: 100vh;
-  background: #f7f8f8;
+  background-color: #f7f3ed;
+  background-image: url('/beige-paper-texture.png');
+  background-position: center top;
+  background-size: cover;
+  background-attachment: fixed;
   color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
   font-size: 14px;
