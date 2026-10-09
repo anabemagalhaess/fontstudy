@@ -16,6 +16,7 @@ type LockupPreviewProps = {
   taglineFontFamily?: string
   fontSize: number
   fontWeight: number
+  fontStyle?: "normal" | "italic" | "oblique"
   taglineSize: number
   logoData?: string
   showLogo?: boolean
@@ -34,6 +35,7 @@ export function LockupPreview({
   taglineFontFamily,
   fontSize,
   fontWeight,
+  fontStyle = "normal",
   taglineSize,
   logoData,
   showLogo = false,
@@ -91,7 +93,8 @@ export function LockupPreview({
         if (!activeDrag || activeDrag.pointerId !== event.pointerId) return
         const coordinate = axis === "y" ? event.clientY : event.clientX
         const valueDelta = ((coordinate - activeDrag.startCoordinate) / activeDrag.trackSize) * 100
-        onLayoutChange?.(key, Math.max(min, Math.min(max, Math.round(activeDrag.startValue + valueDelta))))
+        const nextValue = Math.round((activeDrag.startValue + valueDelta) * 10) / 10
+        onLayoutChange?.(key, Math.max(min, Math.min(max, nextValue)))
       }}
       onPointerUp={(event) => {
         if (guideDrag.current?.pointerId === event.pointerId) guideDrag.current = null
@@ -102,9 +105,10 @@ export function LockupPreview({
         const positiveKey = axis === "y" ? "ArrowDown" : "ArrowRight"
         if (event.key !== negativeKey && event.key !== positiveKey) return
         event.preventDefault()
-        const step = event.shiftKey ? 5 : 1
+        const step = event.shiftKey ? 1 : 0.1
         const delta = event.key === negativeKey ? -step : step
-        onLayoutChange?.(key, Math.max(min, Math.min(max, value + delta)))
+        const nextValue = Math.round((value + delta) * 10) / 10
+        onLayoutChange?.(key, Math.max(min, Math.min(max, nextValue)))
       }}
     >
       <span>{label}</span>
@@ -158,7 +162,7 @@ export function LockupPreview({
         )}
         <span
           className={`lockup-preview__name${draggablePositions ? " lockup-preview__positionable" : ""}`}
-          style={{ fontFamily: `"${fontFamily}", sans-serif`, fontWeight, transform: `translateY(${nameOffset}px)` }}
+          style={{ fontFamily: `"${fontFamily}", sans-serif`, fontWeight, fontStyle, transform: `translateY(${nameOffset}px)` }}
           role={draggablePositions ? "slider" : undefined}
           tabIndex={draggablePositions ? 0 : undefined}
           aria-label={draggablePositions ? "Posição vertical do nome. Usa as setas ou arrasta para ajustar." : undefined}

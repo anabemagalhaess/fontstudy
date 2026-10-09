@@ -7,7 +7,7 @@ import { ClassifyDialog } from "@/components/classify-dialog"
 import { FontCard } from "@/components/font-card"
 import { LibraryDialog } from "@/components/library-dialog"
 import { LockupPreview } from "@/components/lockup-preview"
-import { DEFAULT_CATEGORIES, UNCATEGORIZED, type FavoriteCombo, type FontFamily, type FontLibrary, type StudyLayout, type StudySettings, type ViewMode } from "@/components/font-manager-types"
+import { DEFAULT_CATEGORIES, getFontStyleFromStyle, getFontWeightFromStyle, UNCATEGORIZED, type FavoriteCombo, type FontFamily, type FontLibrary, type StudyLayout, type StudySettings, type ViewMode } from "@/components/font-manager-types"
 
 type LocalFont = { family: string; style: string }
 type LocalFontHandle = {
@@ -23,6 +23,7 @@ type FontManagerWindow = Window & {
   showSaveFilePicker?: (options?: unknown) => Promise<LocalFontHandle>
 }
 type FontFile = File & { webkitRelativePath?: string }
+type GuidePreset = Pick<StudyLayout, "guideTop" | "guideName" | "guideTagline" | "guideBottom" | "guideLeft" | "guideRight">
 
 type ViewOption = { id: ViewMode; label: string }
 const VIEW_OPTIONS: ViewOption[] = [
@@ -34,6 +35,7 @@ const VIEW_OPTIONS: ViewOption[] = [
 ]
 const INITIAL_LAYOUT: StudyLayout = { logoSize: 86, logoGap: 24, logoOffset: 0, taglineGap: 22, nameOffset: 0, taglineOffset: 0, margin: 52, guideTop: 12, guideName: 44, guideTagline: 62, guideBottom: 88, guideLeft: 8, guideRight: 92 }
 const INITIAL_STUDY_SETTINGS: StudySettings = { columns: 5, layout: INITIAL_LAYOUT, fontSize: 58, taglineSize: 24, fontWeight: 400 }
+const GUIDE_PRESET_STORAGE_KEY = "fontes-logo-study-preset"
 const NOT_INSTALLED = "Não instaladas"
 const EMPTY_LIBRARY: FontLibrary = {
   app: "fontes-biblioteca",
@@ -72,6 +74,8 @@ export function FontManager() {
   const [layout, setLayout] = useState<StudyLayout>(INITIAL_LAYOUT)
   const [studySettings, setStudySettings] = useState<StudySettings>(INITIAL_STUDY_SETTINGS)
   const [showGuides, setShowGuides] = useState(true)
+  const [savedGuidePreset, setSavedGuidePreset] = useState<GuidePreset | null>(null)
+  const [selectedFontStyles, setSelectedFontStyles] = useState<Record<string, string>>({})
   const [studioExpanded, setStudioExpanded] = useState(true)
   const [dark, setDark] = useState(false)
   const [fontStatus, setFontStatus] = useState("Carrega as fontes instaladas para começar")
@@ -124,9 +128,11 @@ export function FontManager() {
       if (Number.isFinite(preferences.fontWeight)) setFontWeight(preferences.fontWeight)
       if (typeof preferences.logoData === "string") setLogoData(preferences.logoData)
       if (typeof preferences.showGuides === "boolean") setShowGuides(preferences.showGuides)
+      if (preferences.selectedFontStyles && typeof preferences.selectedFontStyles === "object") setSelectedFontStyles(preferences.selectedFontStyles)
       if (typeof preferences.studioExpanded === "boolean") setStudioExpanded(preferences.studioExpanded)
     }
   }, [])
+
 
   useEffect(() => {
     let cancelled = false
@@ -134,10 +140,12 @@ export function FontManager() {
       try {
         const saved = localStorage.getItem("fontes-lib")
         if (saved) applyLibrary(JSON.parse(saved))
+        const savedPreset = localStorage.getItem(GUIDE_PRESET_STORAGE_KEY)
+        if (savedPreset) setSavedGuidePreset(parseGuidePreset(JSON.parse(savedPreset)))
         const preferences = JSON.parse(localStorage.getItem("fontes-preferencias") || "{}") as {
           view?: ViewMode; filter?: string; query?: string; columns?: number; studyFamilies?: string[]; layout?: StudyLayout; dark?: boolean
           title?: string; tagline?: string; fontSize?: number; taglineSize?: number; fontWeight?: number
-          logoData?: string; showGuides?: boolean; studioExpanded?: boolean; studySettings?: StudySettings
+          logoData?: string; showGuides?: boolean; studioExpanded?: boolean; studySettings?: StudySettings; selectedFontStyles?: Record<string, string>
         }
         if (preferences.view && VIEW_OPTIONS.some((item) => item.id === preferences.view)) setView(preferences.view)
         if (typeof preferences.filter === "string") setFilter(preferences.filter)
@@ -164,6 +172,7 @@ export function FontManager() {
         if (Number.isFinite(preferences.fontWeight)) setFontWeight(preferences.fontWeight!)
         if (typeof preferences.logoData === "string") setLogoData(preferences.logoData)
         if (typeof preferences.showGuides === "boolean") setShowGuides(preferences.showGuides)
+        if (preferences.selectedFontStyles && typeof preferences.selectedFontStyles === "object") setSelectedFontStyles(preferences.selectedFontStyles)
         if (typeof preferences.studioExpanded === "boolean") setStudioExpanded(preferences.studioExpanded)
         const dbRequest = indexedDB.open("fontes-lib", 1)
         dbRequest.onupgradeneeded = () => dbRequest.result.createObjectStore("k")
@@ -226,13 +235,14 @@ export function FontManager() {
       logoData,
       showGuides,
       studioExpanded,
+      selectedFontStyles,
       studySettings,
     },
-  }), [categories, tags, favorites, taglineFavorites, taglineFont, nameFont, favoriteCombos, uninstalledFonts, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded, studySettings])
+  }), [categories, tags, favorites, taglineFavorites, taglineFont, nameFont, favoriteCombos, uninstalledFonts, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded, selectedFontStyles, studySettings])
 
   useEffect(() => {
     if (!hydrated) return
-    const preferences = { view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, showGuides, studioExpanded, studySettings }
+    const preferences = { view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, showGuides, studioExpanded, selectedFontStyles, studySettings }
     try {
       localStorage.setItem("fontes-lib", JSON.stringify(snapshot))
       localStorage.setItem("fontes-preferencias", JSON.stringify(preferences))
@@ -252,7 +262,7 @@ export function FontManager() {
       }
     }, 450)
     return () => window.clearTimeout(timeout)
-  }, [snapshot, hydrated, libraryHandle, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded, studySettings])
+  }, [snapshot, hydrated, libraryHandle, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded, selectedFontStyles, studySettings])
 
   const loadFonts = async () => {
     const fontWindow = window as FontManagerWindow
@@ -526,6 +536,33 @@ export function FontManager() {
     }
   }
 
+  const saveGuidePreset = () => {
+    const { guideTop, guideName, guideTagline, guideBottom, guideLeft, guideRight } = studySettings.layout
+    const preset: GuidePreset = { guideTop, guideName, guideTagline, guideBottom, guideLeft, guideRight }
+    try {
+      localStorage.setItem(GUIDE_PRESET_STORAGE_KEY, JSON.stringify(preset))
+      setSavedGuidePreset(preset)
+      setNotice("Posições das linhas guardadas neste browser. Podes substituir este único preset quando quiseres.")
+    } catch {
+      setNotice("Não foi possível guardar as posições neste browser.")
+    }
+  }
+
+  const restoreGuidePreset = () => {
+    if (!savedGuidePreset) return
+    setStudySettings((current) => ({ ...current, layout: { ...current.layout, ...savedGuidePreset } }))
+  }
+
+  const updateSelectedFontStyle = (family: string, style: string) => {
+    setSelectedFontStyles((current) => {
+      const next = { ...current }
+      if (style) next[family] = style
+      else delete next[family]
+      return next
+    })
+    setNameFont(family)
+  }
+
   const resetViewControls = () => {
     if (view === "study") {
       setStudySettings((current) => ({
@@ -626,7 +663,7 @@ export function FontManager() {
           <div className="studio-heading"><div><p className="eyebrow">{view === "study" ? "Seleção de marca" : "Pré-visualização"}</p><h2 id="studio-heading">{view === "study" ? "Logo Study" : "Estudo de identidade"}</h2></div><div className="studio-heading__meta">{view === "logo" && <button className="icon-button studio-visibility-toggle" aria-label={studioExpanded ? "Ocultar estudo de identidade" : "Mostrar estudo de identidade"} title={studioExpanded ? "Ocultar estudo" : "Mostrar estudo"} aria-expanded={studioExpanded} aria-controls="identity-study-content" onClick={() => setStudioExpanded((current) => !current)}>{studioExpanded ? <EyeOff /> : <Eye />}</button>}<span>{activeFont?.family || "Escolhe uma fonte"}</span>{view === "study" && <span className="study-count">{studyFamilies.length} selecionadas</span>}</div></div>
           <div id="identity-study-content" hidden={view === "logo" && !studioExpanded} className={`studio-layout${view === "study" ? " studio-layout--study" : ""}`}>
             <div className="studio-canvas" style={{ "--studio-margin": `${activeLayout.margin}px` } as React.CSSProperties}>
-              <LockupPreview title={title} tagline={tagline} fontFamily={activeFont?.family || nameFont || "sans-serif"} taglineFontFamily={taglineFont || activeFont?.family || "sans-serif"} fontSize={activeFontSize} fontWeight={activeFontWeight} taglineSize={activeTaglineSize} logoData={logoData} showLogo={view === "study" || view === "logo"} showTagline={view === "study" || view === "logo"} layout={activeLayout} showGuides={view === "study" && showGuides} draggablePositions={view === "study"} onLayoutChange={updateLayout} />
+              <LockupPreview title={title} tagline={tagline} fontFamily={activeFont?.family || nameFont || "sans-serif"} taglineFontFamily={taglineFont || activeFont?.family || "sans-serif"} fontSize={activeFontSize} fontWeight={getFontWeightFromStyle(selectedFontStyles[activeFont?.family || nameFont]) ?? activeFontWeight} fontStyle={getFontStyleFromStyle(selectedFontStyles[activeFont?.family || nameFont])} taglineSize={activeTaglineSize} logoData={logoData} showLogo={view === "study" || view === "logo"} showTagline={view === "study" || view === "logo"} layout={activeLayout} showGuides={view === "study" && showGuides} draggablePositions={view === "study"} onLayoutChange={updateLayout} />
               <div className="canvas-caption"><span>Pré-visualização em tempo real</span><span>{activeFont?.family || "Sem fonte selecionada"}</span></div>
             </div>
             <aside className="studio-controls" aria-label="Ajustes do estudo">
@@ -634,6 +671,14 @@ export function FontManager() {
               <label className="range-control range-control--wide"><span>Margem da área</span><input type="range" min="16" max="220" value={layout.margin} onChange={(event) => updateLayout("margin", Number(event.target.value))} /><output>{layout.margin}px</output></label>
               <p className="control-note">As linhas são referências: arrasta os rótulos para as ajustar. Para reposicionar o texto na vertical, arrasta o nome ou a tagline; o logo não se move.</p>
               <button type="button" className="secondary-button guide-reset-button" onClick={resetGuides}>Repor linhas-guia</button>
+              <details className="guide-preset-menu">
+                <summary>Preset de linhas</summary>
+                <div className="guide-preset-menu__content">
+                  <button type="button" className="text-button" onClick={saveGuidePreset}>Guardar posição atual</button>
+                  {savedGuidePreset && <button type="button" className="text-button" onClick={restoreGuidePreset}>Restaurar posição guardada</button>}
+                  <span>{savedGuidePreset ? "Um preset guardado neste browser" : "Ainda sem preset guardado"}</span>
+                </div>
+              </details>
             </aside>
           </div>
         </section>}
@@ -666,7 +711,10 @@ export function FontManager() {
                   categories={categories}
                   view={view}
                   fontSize={activeFontSize}
-                  fontWeight={activeFontWeight}
+                  fontWeight={getFontWeightFromStyle(selectedFontStyles[font.family]) ?? activeFontWeight}
+                  fontStyle={getFontStyleFromStyle(selectedFontStyles[font.family])}
+                  selectedStyle={selectedFontStyles[font.family] || ""}
+                  onStyleChange={(style) => updateSelectedFontStyle(font.family, style)}
                   taglineSize={activeTaglineSize}
                   nameFontFamily={view === "grid" ? "" : nameFont}
                   taglineFontFamily={taglineFont}
@@ -697,6 +745,21 @@ export function FontManager() {
       <LibraryDialog open={libraryOpen} status={libraryStatus} onClose={() => setLibraryOpen(false)} onOpen={openLibrary} onCreate={createLibrary} onExport={exportLibrary} onImport={importLibrary} />
     </div>
   )
+}
+
+function parseGuidePreset(value: unknown): GuidePreset | null {
+  if (!value || typeof value !== "object") return null
+  const candidate = value as Partial<GuidePreset>
+  const keys = ["guideTop", "guideName", "guideTagline", "guideBottom", "guideLeft", "guideRight"] as const
+  if (keys.some((key) => typeof candidate[key] !== "number" || !Number.isFinite(candidate[key]))) return null
+  return {
+    guideTop: Math.max(3, Math.min(97, candidate.guideTop!)),
+    guideName: Math.max(3, Math.min(97, candidate.guideName!)),
+    guideTagline: Math.max(3, Math.min(97, candidate.guideTagline!)),
+    guideBottom: Math.max(3, Math.min(97, candidate.guideBottom!)),
+    guideLeft: Math.max(3, Math.min(47, candidate.guideLeft!)),
+    guideRight: Math.max(53, Math.min(97, candidate.guideRight!)),
+  }
 }
 
 function normalize(value: string) {

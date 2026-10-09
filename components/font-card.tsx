@@ -13,6 +13,9 @@ type FontCardProps = {
   view: ViewMode
   fontSize: number
   fontWeight: number
+  fontStyle?: "normal" | "italic" | "oblique"
+  selectedStyle?: string
+  onStyleChange?: (style: string) => void
   taglineSize: number
   nameFontFamily: string
   taglineFontFamily: string
@@ -40,6 +43,9 @@ export function FontCard({
   view,
   fontSize,
   fontWeight,
+  fontStyle = "normal",
+  selectedStyle = "",
+  onStyleChange,
   taglineSize,
   nameFontFamily,
   taglineFontFamily,
@@ -62,7 +68,7 @@ export function FontCard({
 
   const downloadPreview = () => {
     const safeTitle = title || font.family
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520"><rect width="100%" height="100%" fill="white"/><text x="600" y="245" text-anchor="middle" dominant-baseline="middle" font-family="${escapeXml(nameFontFamily || font.family)}, sans-serif" font-size="${fontSize * 2}" font-weight="${fontWeight}" fill="#17191c">${escapeXml(safeTitle)}</text>${showTagline && tagline ? `<text x="600" y="340" text-anchor="middle" font-family="${escapeXml(taglineFontFamily || font.family)}, sans-serif" font-size="${taglineSize * 1.5}" fill="#626973">${escapeXml(tagline)}</text>` : ""}</svg>`
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520"><rect width="100%" height="100%" fill="white"/><text x="600" y="245" text-anchor="middle" dominant-baseline="middle" font-family="${escapeXml(nameFontFamily || font.family)}, sans-serif" font-size="${fontSize * 2}" font-weight="${fontWeight}" font-style="${fontStyle}" fill="#17191c">${escapeXml(safeTitle)}</text>${showTagline && tagline ? `<text x="600" y="340" text-anchor="middle" font-family="${escapeXml(taglineFontFamily || font.family)}, sans-serif" font-size="${taglineSize * 1.5}" fill="#626973">${escapeXml(tagline)}</text>` : ""}</svg>`
     const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))
     const anchor = document.createElement("a")
     anchor.href = url
@@ -77,6 +83,13 @@ export function FontCard({
         <button className="font-card__family" onClick={onSelect} title={`Usar ${font.family} no estudo`}>
           {font.family}
         </button>
+        {font.styles.length > 1 && <label className="font-card__variant-select">
+          <span className="sr-only">Estilo de {font.family}</span>
+          <select value={selectedStyle} onChange={(event) => onStyleChange?.(event.target.value)} aria-label={`Estilo da fonte ${font.family}`}>
+            <option value="">Automático</option>
+            {[...font.styles].sort((a, b) => a.localeCompare(b, "pt-PT")).map((style) => <option key={style} value={style}>{style}</option>)}
+          </select>
+        </label>}
         <div className="font-card__actions" aria-label={`Favoritos de ${font.family}`}>
           <button
             className={`icon-button name-star${favoriteName ? " is-active" : ""}`}
@@ -116,6 +129,7 @@ export function FontCard({
           taglineFontFamily={taglineFontFamily || font.family}
           fontSize={fontSize}
           fontWeight={fontWeight}
+          fontStyle={fontStyle}
           taglineSize={taglineSize}
           layout={layout}
           logoData={showLogo ? logoData : ""}
@@ -148,7 +162,6 @@ export function FontCard({
           </button>
         </div>
       </div>
-      {font.styles.length > 0 && <span className="font-card__styles">{font.styles.length} {font.styles.length === 1 ? "estilo" : "estilos"}</span>}
     </article>
   )
 }
