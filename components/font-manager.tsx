@@ -356,29 +356,32 @@ export function FontManager() {
       return
     }
     const categoryByName = new Map(categories.map((category) => [normalize(category), category]))
-    const fontByName = [...fonts].sort((a, b) => normalize(b.family).length - normalize(a.family).length)
-    let matched = 0
+    const fontByName = [...fonts].sort((a, b) => compactName(b.family).length - compactName(a.family).length)
+    const matchedFamilies = new Set<string>()
     let unmatched = 0
     const nextTags = { ...tags }
     const fileList = Array.from(files) as FontFile[]
     for (const file of fileList) {
       if (!/\.(ttf|otf|woff2?|ttc)$/i.test(file.name)) continue
       const path = (file.webkitRelativePath || file.name).split("/")
-      const folderCategory = path.slice(0, -1).map((part) => categoryByName.get(normalize(part))).find(Boolean)
+      const folderCategory = [...path.slice(0, -1)].reverse().map((part) => resolveFolderCategory(part, categoryByName)).find(Boolean)
       const familyName = cleanFontFileName(file.name)
       const normalizedFamily = normalize(familyName)
+      const compactFamily = compactName(familyName)
       const match = fontByName.find((font) => {
         const installed = normalize(font.family)
-        return installed === normalizedFamily || normalizedFamily.startsWith(`${installed} `) || installed.startsWith(`${normalizedFamily} `)
+        const compactInstalled = compactName(font.family)
+        return installed === normalizedFamily || compactInstalled === compactFamily || normalizedFamily.startsWith(`${installed} `)
       })
       if (!match || !folderCategory) { unmatched += 1; continue }
       nextTags[match.family] = folderCategory
-      matched += 1
+      matchedFamilies.add(match.family)
     }
     setTags(nextTags)
+    const matched = matchedFamilies.size
     setNotice(matched
-      ? `${matched} ficheiro${matched === 1 ? " associado" : "s associados"} a famílias já instaladas e classificados. Não foram adicionadas fontes duplicadas.${unmatched ? ` ${unmatched} ficheiro(s) não coincidiram com uma família ou categoria existente.` : ""}`
-      : "Não encontrei correspondências. Os nomes das pastas devem coincidir com as categorias e os nomes dos ficheiros com as famílias instaladas.")
+      ? `${matched} família${matched === 1 ? " associada" : "s associadas"} a categorias existentes. Os ficheiros foram usados apenas para classificar fontes já instaladas, sem duplicar fontes.${unmatched ? ` ${unmatched} ficheiro(s) não coincidiram com uma família instalada ou categoria reconhecida.` : ""}`
+      : "Não encontrei correspondências. Organiza as pastas por categoria e usa nomes de ficheiro iguais aos das famílias instaladas.")
     if (folderInput.current) folderInput.current.value = ""
   }
 
@@ -537,7 +540,28 @@ function normalize(value: string) {
 }
 
 function cleanFontFileName(filename: string) {
-  return filename.replace(/\.(ttf|otf|woff2?|ttc)$/i, "").replace(/[_-]+/g, " ").replace(/\b(regular|normal|book|medium|light|bold|black|thin|italic|oblique|semibold|demibold|extrabold|ultrabold|condensed|expanded|variable|roman)\b/gi, " ").replace(/\s+/g, " ").trim()
+  return filename.replace(/\.(ttf|otf|woff2?|ttc)$/i, "").replace(/[_-]+/g, " ").replace(/\b(regular|normal|book|medium|light|bold|black|thin|italic|oblique|semibold|demibold|extrabold|ultrabold|condensed|expanded|variable|roman|wght|weight|static)\b/gi, " ").replace(/\s+/g, " ").trim()
+}
+
+function compactName(value: string) {
+  return normalize(value).replace(/\s+/g, "")
+}
+
+function resolveFolderCategory(folder: string, categoryByName: Map<string, string>) {
+  const normalized = normalize(folder)
+  const exact = categoryByName.get(normalized)
+  if (exact) return exact
+  const aliases: Record<string, string[]> = {
+    "serif": ["serif", "serifas"],
+    "sem serif": ["sans serif", "sansserif", "sans", "grotesk", "grotesque"],
+    "manuscrita": ["script", "handwriting", "handwritten", "cursive", "cursiva", "calligraphy"],
+    "mono": ["monospace", "monospaced", "typewriter", "coding"],
+  }
+  for (const [category, names] of Object.entries(aliases)) {
+    const existing = categoryByName.get(normalize(category))
+    if (existing && names.some((name) => normalize(name) === normalized)) return existing
+  }
+  return undefined
 }
 
 function categoryFor(family: string, tags: Record<string, string>, categories: string[]) {
