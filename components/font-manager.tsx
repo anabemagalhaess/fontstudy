@@ -32,7 +32,7 @@ const VIEW_OPTIONS: ViewOption[] = [
   { id: "list", label: "Lista vertical" },
   { id: "study", label: "Logo Study" },
 ]
-const INITIAL_LAYOUT: StudyLayout = { logoSize: 86, logoGap: 24, logoOffset: 0, taglineGap: 22, nameOffset: 0, taglineOffset: 0, margin: 52 }
+const INITIAL_LAYOUT: StudyLayout = { logoSize: 86, logoGap: 24, logoOffset: 0, taglineGap: 22, nameOffset: 0, taglineOffset: 0, margin: 52, guideTop: 12, guideName: 44, guideTagline: 62, guideBottom: 88, guideLeft: 8, guideRight: 92 }
 const INITIAL_STUDY_SETTINGS: StudySettings = { columns: 5, layout: INITIAL_LAYOUT, fontSize: 58, taglineSize: 24, fontWeight: 400 }
 const NOT_INSTALLED = "Não instaladas"
 const EMPTY_LIBRARY: FontLibrary = {
@@ -520,9 +520,29 @@ export function FontManager() {
   const updateFontWeight = (value: number) => view === "study"
     ? setStudySettings((current) => ({ ...current, fontWeight: value }))
     : setFontWeight(value)
+  const resetGuides = () => {
+    for (const key of ["guideTop", "guideName", "guideTagline", "guideBottom", "guideLeft", "guideRight"] as const) {
+      updateLayout(key, INITIAL_LAYOUT[key])
+    }
+  }
+
   const resetViewControls = () => {
     if (view === "study") {
-      setStudySettings(INITIAL_STUDY_SETTINGS)
+      setStudySettings((current) => ({
+        ...INITIAL_STUDY_SETTINGS,
+        layout: {
+          ...INITIAL_LAYOUT,
+          nameOffset: current.layout.nameOffset,
+          taglineOffset: current.layout.taglineOffset,
+          margin: current.layout.margin,
+          guideTop: current.layout.guideTop,
+          guideName: current.layout.guideName,
+          guideTagline: current.layout.guideTagline,
+          guideBottom: current.layout.guideBottom,
+          guideLeft: current.layout.guideLeft,
+          guideRight: current.layout.guideRight,
+        },
+      }))
       return
     }
     setColumns(5)
@@ -545,7 +565,7 @@ export function FontManager() {
   }
 
   return (
-    <div className={`font-app${dark ? " font-app--dark" : ""}`}>
+    <div className={`font-app${dark ? " font-app--dark" : ""}${view === "study" ? " font-app--study-mode" : ""}`}>
       <header className="app-header">
         <div className="header-main">
           <div className="brand-lockup"><span className="brand-mark">F</span><div><h1>Gestor de fontes</h1><p>Biblioteca tipográfica & estudos de identidade</p></div></div>
@@ -606,13 +626,14 @@ export function FontManager() {
           <div className="studio-heading"><div><p className="eyebrow">{view === "study" ? "Seleção de marca" : "Pré-visualização"}</p><h2 id="studio-heading">{view === "study" ? "Logo Study" : "Estudo de identidade"}</h2></div><div className="studio-heading__meta">{view === "logo" && <button className="icon-button studio-visibility-toggle" aria-label={studioExpanded ? "Ocultar estudo de identidade" : "Mostrar estudo de identidade"} title={studioExpanded ? "Ocultar estudo" : "Mostrar estudo"} aria-expanded={studioExpanded} aria-controls="identity-study-content" onClick={() => setStudioExpanded((current) => !current)}>{studioExpanded ? <EyeOff /> : <Eye />}</button>}<span>{activeFont?.family || "Escolhe uma fonte"}</span>{view === "study" && <span className="study-count">{studyFamilies.length} selecionadas</span>}</div></div>
           <div id="identity-study-content" hidden={view === "logo" && !studioExpanded} className={`studio-layout${view === "study" ? " studio-layout--study" : ""}`}>
             <div className="studio-canvas" style={{ "--studio-margin": `${activeLayout.margin}px` } as React.CSSProperties}>
-              <LockupPreview title={title} tagline={tagline} fontFamily={activeFont?.family || nameFont || "sans-serif"} taglineFontFamily={taglineFont || activeFont?.family || "sans-serif"} fontSize={activeFontSize} fontWeight={activeFontWeight} taglineSize={activeTaglineSize} logoData={logoData} showLogo={view === "study" || view === "logo"} showTagline={view === "study" || view === "logo"} layout={activeLayout} showGuides={view === "study" && showGuides} onLayoutChange={updateLayout} />
+              <LockupPreview title={title} tagline={tagline} fontFamily={activeFont?.family || nameFont || "sans-serif"} taglineFontFamily={taglineFont || activeFont?.family || "sans-serif"} fontSize={activeFontSize} fontWeight={activeFontWeight} taglineSize={activeTaglineSize} logoData={logoData} showLogo={view === "study" || view === "logo"} showTagline={view === "study" || view === "logo"} layout={activeLayout} showGuides={view === "study" && showGuides} draggablePositions={view === "study"} onLayoutChange={updateLayout} />
               <div className="canvas-caption"><span>Pré-visualização em tempo real</span><span>{activeFont?.family || "Sem fonte selecionada"}</span></div>
             </div>
             <aside className="studio-controls" aria-label="Ajustes do estudo">
               <div className="studio-control-heading"><div><p className="eyebrow">Ajustes manuais</p><h3>Composição</h3></div><button className={`guide-toggle${showGuides ? " is-active" : ""}`} aria-pressed={showGuides} onClick={() => setShowGuides((current) => !current)}>Linhas-guia</button></div>
               <label className="range-control range-control--wide"><span>Margem da área</span><input type="range" min="16" max="220" value={layout.margin} onChange={(event) => updateLayout("margin", Number(event.target.value))} /><output>{layout.margin}px</output></label>
-              <p className="control-note">Arrasta as linhas do nome, tagline e margens para ajustar a composição. Também podes usar as setas do teclado quando uma linha estiver selecionada.</p>
+              <p className="control-note">As linhas são referências: arrasta os rótulos para as ajustar. Para reposicionar o texto na vertical, arrasta o nome ou a tagline; o logo não se move.</p>
+              <button type="button" className="secondary-button guide-reset-button" onClick={resetGuides}>Repor linhas-guia</button>
             </aside>
           </div>
         </section>}

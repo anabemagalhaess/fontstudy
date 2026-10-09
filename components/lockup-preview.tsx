@@ -3,8 +3,11 @@
 import { useRef } from "react"
 import type { StudyLayout } from "@/components/font-manager-types"
 
-type GuideKey = "nameOffset" | "taglineOffset" | "margin"
-type GuideDrag = { pointerId: number; startY: number; startValue: number }
+type GuideKey = "guideTop" | "guideName" | "guideTagline" | "guideBottom" | "guideLeft" | "guideRight"
+type GuideAxis = "x" | "y"
+type GuideDrag = { pointerId: number; startCoordinate: number; startValue: number; trackSize: number }
+type ObjectDrag = { pointerId: number; startY: number; startValue: number }
+type PositionKey = "nameOffset" | "taglineOffset"
 
 type LockupPreviewProps = {
   title: string
@@ -20,7 +23,8 @@ type LockupPreviewProps = {
   compact?: boolean
   layout?: StudyLayout
   showGuides?: boolean
-  onLayoutChange?: (key: GuideKey, value: number) => void
+  draggablePositions?: boolean
+  onLayoutChange?: (key: keyof StudyLayout, value: number) => void
 }
 
 export function LockupPreview({
@@ -37,6 +41,7 @@ export function LockupPreview({
   compact = false,
   layout,
   showGuides = false,
+  draggablePositions = false,
   onLayoutChange,
 }: LockupPreviewProps) {
   const styles = {
@@ -47,57 +52,101 @@ export function LockupPreview({
     "--preview-logo-gap": `${layout?.logoGap ?? 24}px`,
     "--preview-tagline-gap": `${layout?.taglineGap ?? 18}px`,
     "--preview-margin": `${layout?.margin ?? 48}px`,
+    "--guide-top": `${layout?.guideTop ?? 12}%`,
+    "--guide-name": `${layout?.guideName ?? 44}%`,
+    "--guide-tagline": `${layout?.guideTagline ?? 62}%`,
+    "--guide-bottom": `${layout?.guideBottom ?? 88}%`,
+    "--guide-left": `${layout?.guideLeft ?? 8}%`,
+    "--guide-right": `${layout?.guideRight ?? 92}%`,
   } as React.CSSProperties
 
-  const renderGuide = (
-    label: string,
-    key: GuideKey,
-    value: number,
-    min: number,
-    max: number,
-    direction: number,
-    className: string,
-  ) => (
+  const guideDrag = useRef<GuideDrag | null>(null)
+  const objectDrag = useRef<ObjectDrag | null>(null)
+
+  const renderGuide = (label: string, key: GuideKey, value: number, min: number, max: number, axis: GuideAxis, className: string) => (
     <button
+      key={key}
       type="button"
       role="slider"
-      aria-label={`${label}, ${value} píxeis. Arrasta para ajustar.`}
-      aria-orientation="vertical"
+      aria-label={`${label}, ${value} por cento. Arrasta para ajustar a referência.`}
+      aria-orientation={axis === "y" ? "vertical" : "horizontal"}
       aria-valuemin={min}
       aria-valuemax={max}
       aria-valuenow={value}
-      className={`preview-guide ${className}`}
+      className={`preview-guide ${axis === "y" ? "preview-guide--horizontal" : "preview-guide--vertical"} ${className}`}
       onPointerDown={(event) => {
+        const bounds = event.currentTarget.parentElement?.getBoundingClientRect()
+        if (!bounds) return
+        const trackSize = axis === "y" ? bounds.height : bounds.width
         event.currentTarget.setPointerCapture(event.pointerId)
-        drag.current = { pointerId: event.pointerId, startY: event.clientY, startValue: value }
+        guideDrag.current = {
+          pointerId: event.pointerId,
+          startCoordinate: axis === "y" ? event.clientY : event.clientX,
+          startValue: value,
+          trackSize,
+        }
       }}
       onPointerMove={(event) => {
-        const activeDrag = drag.current
+        const activeDrag = guideDrag.current
         if (!activeDrag || activeDrag.pointerId !== event.pointerId) return
-        const delta = (event.clientY - activeDrag.startY) * direction
-        onLayoutChange?.(key, Math.max(min, Math.min(max, Math.round(activeDrag.startValue + delta))))
+        const coordinate = axis === "y" ? event.clientY : event.clientX
+        const valueDelta = ((coordinate - activeDrag.startCoordinate) / activeDrag.trackSize) * 100
+        onLayoutChange?.(key, Math.max(min, Math.min(max, Math.round(activeDrag.startValue + valueDelta))))
       }}
       onPointerUp={(event) => {
-        if (drag.current?.pointerId === event.pointerId) drag.current = null
+        if (guideDrag.current?.pointerId === event.pointerId) guideDrag.current = null
       }}
-      onPointerCancel={() => { drag.current = null }}
+      onPointerCancel={() => { guideDrag.current = null }}
       onKeyDown={(event) => {
-        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return
+        const negativeKey = axis === "y" ? "ArrowUp" : "ArrowLeft"
+        const positiveKey = axis === "y" ? "ArrowDown" : "ArrowRight"
+        if (event.key !== negativeKey && event.key !== positiveKey) return
         event.preventDefault()
-        const step = event.shiftKey ? 10 : 1
-        const change = (event.key === "ArrowUp" ? -step : step) * direction
-        onLayoutChange?.(key, Math.max(min, Math.min(max, value + change)))
+        const step = event.shiftKey ? 5 : 1
+        const delta = event.key === negativeKey ? -step : step
+        onLayoutChange?.(key, Math.max(min, Math.min(max, value + delta)))
       }}
     >
       <span>{label}</span>
     </button>
   )
 
-  const drag = useRef<GuideDrag | null>(null)
+  const beginObjectDrag = (event: React.PointerEvent<HTMLSpanElement>, startValue: number) => {
+    event.currentTarget.setPointerCapture(event.pointerId)
+    objectDrag.current = { pointerId: event.pointerId, startY: event.clientY, startValue }
+  }
+
+  const moveObject = (event: React.PointerEvent<HTMLSpanElement>, key: PositionKey) => {
+    const activeDrag = objectDrag.current
+    if (!activeDrag || activeDrag.pointerId !== event.pointerId) return
+    onLayoutChange?.(key, Math.max(-180, Math.min(180, Math.round(activeDrag.startValue + event.clientY - activeDrag.startY))))
+  }
+
+  const endObjectDrag = (pointerId: number) => {
+    if (objectDrag.current?.pointerId === pointerId) objectDrag.current = null
+  }
+
+  const handleObjectKeyDown = (event: React.KeyboardEvent<HTMLSpanElement>, key: PositionKey, value: number) => {
+    if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return
+    event.preventDefault()
+    const step = event.shiftKey ? 10 : 1
+    const delta = event.key === "ArrowUp" ? -step : step
+    onLayoutChange?.(key, Math.max(-180, Math.min(180, value + delta)))
+  }
+
+  const nameOffset = layout?.nameOffset ?? 0
+  const taglineOffset = layout?.taglineOffset ?? 0
 
   return (
     <div className={`lockup-preview${compact ? " lockup-preview--compact" : ""}${showGuides ? " has-guides" : ""}`} style={styles}>
-      {showGuides && renderGuide("margem superior", "margin", layout?.margin ?? 48, 16, 220, 1, "preview-guide--top")}
+      {showGuides && <>
+        {renderGuide("margem superior", "guideTop", layout?.guideTop ?? 12, 3, 97, "y", "preview-guide--top")}
+        {renderGuide("linha do nome", "guideName", layout?.guideName ?? 44, 3, 97, "y", "preview-guide--name")}
+        {renderGuide("linha da tagline", "guideTagline", layout?.guideTagline ?? 62, 3, 97, "y", "preview-guide--tagline")}
+        {renderGuide("margem inferior", "guideBottom", layout?.guideBottom ?? 88, 3, 97, "y", "preview-guide--bottom")}
+        {renderGuide("guia vertical esquerda", "guideLeft", layout?.guideLeft ?? 8, 3, 47, "x", "preview-guide--left")}
+        {renderGuide("guia vertical direita", "guideRight", layout?.guideRight ?? 92, 53, 97, "x", "preview-guide--right")}
+      </>}
       <div className="lockup-preview__content">
         {showLogo && logoData && (
           <img
@@ -107,20 +156,45 @@ export function LockupPreview({
             style={{ width: layout ? `${layout.logoSize}px` : undefined, marginBottom: layout ? `${layout.logoGap}px` : undefined, transform: `translateY(${layout?.logoOffset ?? 0}px)` }}
           />
         )}
-        {showGuides && renderGuide("linha do nome", "nameOffset", layout?.nameOffset ?? 0, -180, 180, 1, "preview-guide--name")}
-        <span className="lockup-preview__name" style={{ fontFamily: `"${fontFamily}", sans-serif`, transform: `translateY(${layout?.nameOffset ?? 0}px)` }}>
+        <span
+          className={`lockup-preview__name${draggablePositions ? " lockup-preview__positionable" : ""}`}
+          style={{ fontFamily: `"${fontFamily}", sans-serif`, fontWeight, transform: `translateY(${nameOffset}px)` }}
+          role={draggablePositions ? "slider" : undefined}
+          tabIndex={draggablePositions ? 0 : undefined}
+          aria-label={draggablePositions ? "Posição vertical do nome. Usa as setas ou arrasta para ajustar." : undefined}
+          aria-orientation={draggablePositions ? "vertical" : undefined}
+          aria-valuemin={draggablePositions ? -180 : undefined}
+          aria-valuemax={draggablePositions ? 180 : undefined}
+          aria-valuenow={draggablePositions ? nameOffset : undefined}
+          onPointerDown={draggablePositions ? (event) => beginObjectDrag(event, nameOffset) : undefined}
+          onPointerMove={draggablePositions ? (event) => moveObject(event, "nameOffset") : undefined}
+          onPointerUp={draggablePositions ? (event) => endObjectDrag(event.pointerId) : undefined}
+          onPointerCancel={draggablePositions ? () => { objectDrag.current = null } : undefined}
+          onKeyDown={draggablePositions ? (event) => handleObjectKeyDown(event, "nameOffset", nameOffset) : undefined}
+        >
           {title || "O teu nome"}
         </span>
         {showTagline && tagline && (
-          <>
-            {showGuides && renderGuide("linha da tagline", "taglineOffset", layout?.taglineOffset ?? 0, -180, 180, 1, "preview-guide--tagline")}
-            <span className="lockup-preview__tagline" style={{ fontFamily: `"${taglineFontFamily || fontFamily}", sans-serif`, transform: `translateY(${layout?.taglineOffset ?? 0}px)` }}>
-              {tagline}
-            </span>
-          </>
+          <span
+            className={`lockup-preview__tagline${draggablePositions ? " lockup-preview__positionable" : ""}`}
+            style={{ fontFamily: `"${taglineFontFamily || fontFamily}", sans-serif`, transform: `translateY(${taglineOffset}px)` }}
+            role={draggablePositions ? "slider" : undefined}
+            tabIndex={draggablePositions ? 0 : undefined}
+            aria-label={draggablePositions ? "Posição vertical da tagline. Usa as setas ou arrasta para ajustar." : undefined}
+            aria-orientation={draggablePositions ? "vertical" : undefined}
+            aria-valuemin={draggablePositions ? -180 : undefined}
+            aria-valuemax={draggablePositions ? 180 : undefined}
+            aria-valuenow={draggablePositions ? taglineOffset : undefined}
+            onPointerDown={draggablePositions ? (event) => beginObjectDrag(event, taglineOffset) : undefined}
+            onPointerMove={draggablePositions ? (event) => moveObject(event, "taglineOffset") : undefined}
+            onPointerUp={draggablePositions ? (event) => endObjectDrag(event.pointerId) : undefined}
+            onPointerCancel={draggablePositions ? () => { objectDrag.current = null } : undefined}
+            onKeyDown={draggablePositions ? (event) => handleObjectKeyDown(event, "taglineOffset", taglineOffset) : undefined}
+          >
+            {tagline}
+          </span>
         )}
       </div>
-      {showGuides && renderGuide("margem inferior", "margin", layout?.margin ?? 48, 16, 220, -1, "preview-guide--bottom")}
     </div>
   )
 }

@@ -1,6 +1,6 @@
 export type FontFamily = { family: string; styles: string[] }
 export type ViewMode = "grid" | "tagline" | "logo" | "list" | "study"
-export type StudyLayout = { logoSize: number; logoGap: number; logoOffset: number; taglineGap: number; nameOffset: number; taglineOffset: number; margin: number }
+export type StudyLayout = { logoSize: number; logoGap: number; logoOffset: number; taglineGap: number; nameOffset: number; taglineOffset: number; margin: number; guideTop: number; guideName: number; guideTagline: number; guideBottom: number; guideLeft: number; guideRight: number }
 export type StudySettings = { columns: number; layout: StudyLayout; fontSize: number; taglineSize: number; fontWeight: number }
 export type FavoriteCombo = { n: string; t: string }
 export type FontLibrary = {
