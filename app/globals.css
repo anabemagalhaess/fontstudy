@@ -227,6 +227,7 @@
 .filter-chip.is-active { border-color: var(--cursor-color); background: var(--cursor-color); color: var(--cursor-foreground) !important; }
 .filter-chip.is-active span { color: inherit; }
 .settings-row { display: flex; align-items: center; flex-wrap: wrap; gap: 15px 20px; margin-top: 14px; }
+.settings-row--sources { margin-top: 10px; }
 .range-control { display: grid; grid-template-columns: auto minmax(70px, 110px) 32px; align-items: center; gap: 8px; color: var(--muted-ink); font-size: 12px; white-space: nowrap; }
 .range-control input[type="range"] { width: 100%; accent-color: var(--cursor-color); }
 .range-control output { color: var(--ink); font-variant-numeric: tabular-nums; text-align: right; }

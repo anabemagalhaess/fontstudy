@@ -520,6 +520,17 @@ export function FontManager() {
   const updateFontWeight = (value: number) => view === "study"
     ? setStudySettings((current) => ({ ...current, fontWeight: value }))
     : setFontWeight(value)
+  const resetViewControls = () => {
+    if (view === "study") {
+      setStudySettings(INITIAL_STUDY_SETTINGS)
+      return
+    }
+    setColumns(5)
+    setFontSize(58)
+    setTaglineSize(24)
+    setFontWeight(400)
+    setLayout(INITIAL_LAYOUT)
+  }
   const categoryFilters = ["Todas", "Favoritos do nome", "Favoritos da tagline", "Composições", ...categories, UNCATEGORIZED, NOT_INSTALLED]
   const chipCount = (item: string) => {
     if (item === "Todas") return fonts.length
@@ -577,10 +588,13 @@ export function FontManager() {
             <label className="range-control"><span>Espaço Tagline</span><input type="range" min="-180" max="180" value={activeLayout.taglineOffset} onChange={(event) => updateLayout("taglineOffset", Number(event.target.value))} /><output>{activeLayout.taglineOffset}px</output></label>
           </>}
           <label className="range-control"><span>Peso</span><input type="range" min="100" max="900" step="100" value={activeFontWeight} onChange={(event) => updateFontWeight(Number(event.target.value))} /><output>{activeFontWeight}</output></label>
-          <label className="font-select-control"><span>Fonte do nome</span><select value={nameFont} onChange={(event) => setNameFont(event.target.value)}><option value="">Escolher fonte principal</option>{fonts.map((font) => <option key={font.family} value={font.family}>{font.family}</option>)}</select></label>
-          {view !== "grid" && <label className="font-select-control"><span>Fonte da tagline</span><select value={taglineFont} onChange={(event) => setTaglineFont(event.target.value)}><option value="">Mesma fonte do nome</option>{fonts.map((font) => <option key={font.family} value={font.family}>{font.family}</option>)}</select></label>}
-          {view !== "study" && <button className="secondary-button classify-button" onClick={() => setClassifyOpen(true)}><FolderUp /> Classificar</button>}
+          <button type="button" className="secondary-button reset-controls-button" onClick={resetViewControls}>Reset</button>
         </div>
+        {view !== "grid" && <div className="settings-row settings-row--sources" aria-label="Fontes dos exemplos">
+          <label className="font-select-control"><span>Fonte do nome</span><select value={nameFont} onChange={(event) => setNameFont(event.target.value)}><option value="">Fonte de cada cartão</option>{fonts.map((font) => <option key={font.family} value={font.family}>{font.family}</option>)}</select></label>
+          <label className="font-select-control"><span>Fonte da tagline</span><select value={taglineFont} onChange={(event) => setTaglineFont(event.target.value)}><option value="">Fonte de cada cartão</option>{fonts.map((font) => <option key={font.family} value={font.family}>{font.family}</option>)}</select></label>
+          {view !== "study" && <button className="secondary-button classify-button" onClick={() => setClassifyOpen(true)}><FolderUp /> Classificar</button>}
+        </div>}
       </header>
 
       <main className="font-main">
@@ -630,6 +644,7 @@ export function FontManager() {
                   fontSize={activeFontSize}
                   fontWeight={activeFontWeight}
                   taglineSize={activeTaglineSize}
+                  nameFontFamily={view === "grid" ? "" : nameFont}
                   taglineFontFamily={taglineFont}
                   layout={activeLayout}
                   logoData={logoData}

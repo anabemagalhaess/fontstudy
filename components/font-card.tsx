@@ -14,6 +14,7 @@ type FontCardProps = {
   fontSize: number
   fontWeight: number
   taglineSize: number
+  nameFontFamily: string
   taglineFontFamily: string
   layout: StudyLayout
   logoData: string
@@ -40,6 +41,7 @@ export function FontCard({
   fontSize,
   fontWeight,
   taglineSize,
+  nameFontFamily,
   taglineFontFamily,
   layout,
   logoData,
@@ -60,7 +62,7 @@ export function FontCard({
 
   const downloadPreview = () => {
     const safeTitle = title || font.family
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520"><rect width="100%" height="100%" fill="white"/><text x="600" y="245" text-anchor="middle" dominant-baseline="middle" font-family="${escapeXml(font.family)}, sans-serif" font-size="${fontSize * 2}" font-weight="${fontWeight}" fill="#17191c">${escapeXml(safeTitle)}</text>${showTagline && tagline ? `<text x="600" y="340" text-anchor="middle" font-family="${escapeXml(font.family)}, sans-serif" font-size="${taglineSize * 1.5}" fill="#626973">${escapeXml(tagline)}</text>` : ""}</svg>`
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="520" viewBox="0 0 1200 520"><rect width="100%" height="100%" fill="white"/><text x="600" y="245" text-anchor="middle" dominant-baseline="middle" font-family="${escapeXml(nameFontFamily || font.family)}, sans-serif" font-size="${fontSize * 2}" font-weight="${fontWeight}" fill="#17191c">${escapeXml(safeTitle)}</text>${showTagline && tagline ? `<text x="600" y="340" text-anchor="middle" font-family="${escapeXml(taglineFontFamily || font.family)}, sans-serif" font-size="${taglineSize * 1.5}" fill="#626973">${escapeXml(tagline)}</text>` : ""}</svg>`
     const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml" }))
     const anchor = document.createElement("a")
     anchor.href = url
@@ -110,7 +112,7 @@ export function FontCard({
         <LockupPreview
           title={title || font.family}
           tagline={tagline}
-          fontFamily={font.family}
+          fontFamily={nameFontFamily || font.family}
           taglineFontFamily={taglineFontFamily || font.family}
           fontSize={fontSize}
           fontWeight={fontWeight}
