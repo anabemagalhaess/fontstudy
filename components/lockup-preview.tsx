@@ -15,6 +15,7 @@ type LockupPreviewProps = {
   layout?: {
     logoSize: number
     logoGap: number
+    logoOffset: number
     taglineGap: number
     nameOffset: number
     taglineOffset: number
@@ -57,7 +58,7 @@ export function LockupPreview({
             className="lockup-preview__logo"
             src={logoData}
             alt="Logótipo do estudo"
-            style={{ width: layout ? `${layout.logoSize}px` : undefined, marginBottom: layout ? `${layout.logoGap}px` : undefined }}
+            style={{ width: layout ? `${layout.logoSize}px` : undefined, marginBottom: layout ? `${layout.logoGap}px` : undefined, transform: `translateY(${layout?.logoOffset ?? 0}px)` }}
           />
         )}
         {showGuides && <div className="preview-guide preview-guide--name" aria-hidden="true"><span>linha do nome</span></div>}

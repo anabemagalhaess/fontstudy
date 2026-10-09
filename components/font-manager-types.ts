@@ -1,5 +1,6 @@
 export type FontFamily = { family: string; styles: string[] }
 export type ViewMode = "grid" | "tagline" | "logo" | "list" | "study"
+export type StudyLayout = { logoSize: number; logoGap: number; logoOffset: number; taglineGap: number; nameOffset: number; taglineOffset: number; margin: number }
 export type FavoriteCombo = { n: string; t: string }
 export type FontLibrary = {
   app: "fontes-biblioteca"

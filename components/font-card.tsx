@@ -1,8 +1,8 @@
 "use client"
 
-import { Download, Heart, Smile, Type } from "lucide-react"
+import { Download, Heart, Smile, Star, Type } from "lucide-react"
 import { LockupPreview } from "@/components/lockup-preview"
-import type { FontFamily, ViewMode } from "@/components/font-manager-types"
+import type { FontFamily, StudyLayout, ViewMode } from "@/components/font-manager-types"
 
 type FontCardProps = {
   font: FontFamily
@@ -15,6 +15,7 @@ type FontCardProps = {
   fontWeight: number
   taglineSize: number
   taglineFontFamily: string
+  layout: StudyLayout
   logoData: string
   favoriteName: boolean
   favoriteTagline: boolean
@@ -40,6 +41,7 @@ export function FontCard({
   fontWeight,
   taglineSize,
   taglineFontFamily,
+  layout,
   logoData,
   favoriteName,
   favoriteTagline,
@@ -75,13 +77,13 @@ export function FontCard({
         </button>
         <div className="font-card__actions" aria-label={`Favoritos de ${font.family}`}>
           <button
-            className={`icon-button heart-button${favoriteName ? " is-active" : ""}`}
+            className={`icon-button name-star${favoriteName ? " is-active" : ""}`}
             aria-label={`${favoriteName ? "Remover" : "Adicionar"} ${font.family} dos favoritos do nome`}
             aria-pressed={favoriteName}
             title="Favorito do nome"
             onClick={onToggleName}
           >
-            <Heart fill={favoriteName ? "currentColor" : "none"} />
+            <Star fill={favoriteName ? "currentColor" : "none"} />
           </button>
           <button
             className={`icon-button text-favorite${favoriteTagline ? " is-active" : ""}`}
@@ -96,7 +98,7 @@ export function FontCard({
             className={`icon-button heart-button combo-heart${favoriteCombo ? " is-active" : ""}`}
             aria-label={`${favoriteCombo ? "Remover" : "Guardar"} composição ${font.family} e ${tagline || "tagline"}`}
             aria-pressed={favoriteCombo}
-            title="Guardar composição (nome + tagline)"
+            title="Guardar composição Happy (nome + tagline)"
             onClick={onToggleCombo}
           >
             <Heart fill={favoriteCombo ? "currentColor" : "none"} />
@@ -113,6 +115,7 @@ export function FontCard({
           fontSize={fontSize}
           fontWeight={fontWeight}
           taglineSize={taglineSize}
+          layout={layout}
           logoData={showLogo ? logoData : ""}
           showLogo={showLogo}
           showTagline={showTagline}

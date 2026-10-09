@@ -1,12 +1,13 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Download, FolderUp, Heart, ImagePlus, Moon, Search, Sun, Type, X } from "lucide-react"
+import { Download, FolderUp, Heart, ImagePlus, Moon, Search, Star, Sun, Type, X } from "lucide-react"
 import { CategoriesDialog } from "@/components/categories-dialog"
+import { ClassifyDialog } from "@/components/classify-dialog"
 import { FontCard } from "@/components/font-card"
 import { LibraryDialog } from "@/components/library-dialog"
 import { LockupPreview } from "@/components/lockup-preview"
-import { DEFAULT_CATEGORIES, UNCATEGORIZED, type FavoriteCombo, type FontFamily, type FontLibrary, type ViewMode } from "@/components/font-manager-types"
+import { DEFAULT_CATEGORIES, UNCATEGORIZED, type FavoriteCombo, type FontFamily, type FontLibrary, type StudyLayout, type ViewMode } from "@/components/font-manager-types"
 
 type LocalFont = { family: string; style: string }
 type LocalFontHandle = {
@@ -21,7 +22,6 @@ type FontManagerWindow = Window & {
   showOpenFilePicker?: (options?: unknown) => Promise<LocalFontHandle[]>
   showSaveFilePicker?: (options?: unknown) => Promise<LocalFontHandle>
 }
-type StudyLayout = { logoSize: number; logoGap: number; taglineGap: number; nameOffset: number; taglineOffset: number; margin: number }
 type FontFile = File & { webkitRelativePath?: string }
 
 type ViewOption = { id: ViewMode; label: string }
@@ -32,7 +32,7 @@ const VIEW_OPTIONS: ViewOption[] = [
   { id: "list", label: "Lista vertical" },
   { id: "study", label: "Logo Study" },
 ]
-const INITIAL_LAYOUT: StudyLayout = { logoSize: 86, logoGap: 24, taglineGap: 22, nameOffset: 0, taglineOffset: 0, margin: 52 }
+const INITIAL_LAYOUT: StudyLayout = { logoSize: 86, logoGap: 24, logoOffset: 0, taglineGap: 22, nameOffset: 0, taglineOffset: 0, margin: 52 }
 const EMPTY_LIBRARY: FontLibrary = {
   app: "fontes-biblioteca",
   version: 1,
@@ -74,8 +74,8 @@ export function FontManager() {
   const [libraryHandle, setLibraryHandle] = useState<LocalFontHandle | null>(null)
   const [hydrated, setHydrated] = useState(false)
   const [categoriesOpen, setCategoriesOpen] = useState(false)
+  const [classifyOpen, setClassifyOpen] = useState(false)
   const [libraryOpen, setLibraryOpen] = useState(false)
-  const folderInput = useRef<HTMLInputElement>(null)
   const logoInput = useRef<HTMLInputElement>(null)
 
   const applyLibrary = useCallback((value: unknown) => {
@@ -349,29 +349,29 @@ export function FontManager() {
     })
   }
 
-  const importFolder = (files: FileList | null) => {
+  const importFolder = (files: FileList | null, selectedCategory?: string) => {
     if (!files?.length) return
     if (!fonts.length) {
-      setNotice("Carrega primeiro as fontes instaladas. O carregamento por pastas só classifica famílias existentes; não instala nem duplica fontes.")
+      setNotice("Carrega primeiro as fontes instaladas. A classificação associa os ficheiros OTF/TTF a famílias existentes; não instala nem duplica fontes.")
       return
     }
     const categoryByName = new Map(categories.map((category) => [normalize(category), category]))
     const fontByName = [...fonts].sort((a, b) => compactName(b.family).length - compactName(a.family).length)
     const matchedFamilies = new Set<string>()
     let unmatched = 0
+    let scanned = 0
     const nextTags = { ...tags }
     const fileList = Array.from(files) as FontFile[]
     for (const file of fileList) {
-      if (!/\.(ttf|otf|woff2?|ttc)$/i.test(file.name)) continue
+      if (!/\.(ttf|otf)$/i.test(file.name)) continue
+      scanned += 1
       const path = (file.webkitRelativePath || file.name).split("/")
-      const folderCategory = [...path.slice(0, -1)].reverse().map((part) => resolveFolderCategory(part, categoryByName)).find(Boolean)
+      const folderCategory = selectedCategory || [...path.slice(0, -1)].reverse().map((part) => resolveFolderCategory(part, categoryByName)).find(Boolean)
       const familyName = cleanFontFileName(file.name)
-      const normalizedFamily = normalize(familyName)
       const compactFamily = compactName(familyName)
       const match = fontByName.find((font) => {
-        const installed = normalize(font.family)
-        const compactInstalled = compactName(font.family)
-        return installed === normalizedFamily || compactInstalled === compactFamily || normalizedFamily.startsWith(`${installed} `)
+        const installed = compactName(font.family)
+        return installed === compactFamily || (installed.length >= 5 && compactFamily.startsWith(installed))
       })
       if (!match || !folderCategory) { unmatched += 1; continue }
       nextTags[match.family] = folderCategory
@@ -379,10 +379,12 @@ export function FontManager() {
     }
     setTags(nextTags)
     const matched = matchedFamilies.size
+    const destination = selectedCategory ? ` em “${selectedCategory}”` : " nas categorias correspondentes às pastas"
     setNotice(matched
-      ? `${matched} família${matched === 1 ? " associada" : "s associadas"} a categorias existentes. Os ficheiros foram usados apenas para classificar fontes já instaladas, sem duplicar fontes.${unmatched ? ` ${unmatched} ficheiro(s) não coincidiram com uma família instalada ou categoria reconhecida.` : ""}`
-      : "Não encontrei correspondências. Organiza as pastas por categoria e usa nomes de ficheiro iguais aos das famílias instaladas.")
-    if (folderInput.current) folderInput.current.value = ""
+      ? `${matched} família${matched === 1 ? " classificada" : "s classificadas"}${destination}. Foram lidos ${scanned} ficheiros OTF/TTF e não foram adicionadas fontes duplicadas.${unmatched ? ` ${unmatched} ficheiro(s) não corresponderam a uma família instalada ou categoria reconhecida.` : ""}`
+      : scanned === 0
+        ? "A pasta selecionada não contém ficheiros OTF ou TTF."
+        : "Não encontrei famílias instaladas correspondentes. Confirma os nomes dos ficheiros e, para uma pasta completa, os nomes das pastas de estilos.")
   }
 
   const handleLogoFile = (file?: File) => {
@@ -431,27 +433,30 @@ export function FontManager() {
           <button className="secondary-button theme-toggle" onClick={() => setDark((current) => !current)} aria-label={dark ? "Ativar modo claro" : "Ativar modo escuro"} title={dark ? "Modo claro" : "Modo escuro"}>{dark ? <Sun /> : <Moon />}<span>Claro/Escuro</span></button>
         </div>
 
-        {view !== "study" && <>
-          <div className="filter-row">
-            <label className="search-box"><Search /><span className="sr-only">Pesquisar família</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pesquisar família" /></label>
-            <div className="filter-chips" aria-label="Filtros de fontes">
-              {categoryFilters.map((item) => <button key={item} className={`filter-chip${filter === item ? " is-active" : ""}`} aria-pressed={filter === item} onClick={() => setFilter(item)}>
-                {item === "Favoritos do nome" ? <><Heart fill="currentColor" /> Nome</> : item === "Favoritos da tagline" ? <><Type /> Tagline</> : item === "Composições" ? <><Heart /> N+T</> : item} <span>{chipCount(item)}</span>
-              </button>)}
-            </div>
-            <button className="secondary-button" onClick={() => setCategoriesOpen(true)}>Categorias</button>
+        {view !== "study" && <div className="filter-row">
+          <label className="search-box"><Search /><span className="sr-only">Pesquisar família</span><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Pesquisar família" /></label>
+          <div className="filter-chips" aria-label="Filtros de fontes">
+            {categoryFilters.map((item) => <button key={item} className={`filter-chip${filter === item ? " is-active" : ""}`} aria-pressed={filter === item} onClick={() => setFilter(item)}>
+              {item === "Favoritos do nome" ? <><Star fill="currentColor" /> Nome</> : item === "Favoritos da tagline" ? <><Type /> Tagline</> : item === "Composições" ? <><Heart /> Happy</> : item} <span>{chipCount(item)}</span>
+            </button>)}
           </div>
-          <div className="settings-row">
-            <label className="range-control"><span>Tamanho</span><input type="range" min="20" max="140" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} /><output>{fontSize}</output></label>
-            {view !== "list" && <label className="range-control"><span>Por linha</span><input type="range" min="1" max="12" value={columns} onChange={(event) => setColumns(Number(event.target.value))} /><output>{columns}</output></label>}
-            <label className="range-control"><span>Peso</span><input type="range" min="100" max="900" step="100" value={fontWeight} onChange={(event) => setFontWeight(Number(event.target.value))} /><output>{fontWeight}</output></label>
-            {(view === "logo") && <label className="range-control"><span>Espaço do logo</span><input type="range" min="0" max="150" value={layout.logoGap} onChange={(event) => updateLayout("logoGap", Number(event.target.value))} /><output>{layout.logoGap}</output></label>}
-            {view !== "grid" && <label className="range-control"><span>Tamanho tagline</span><input type="range" min="10" max="80" value={taglineSize} onChange={(event) => setTaglineSize(Number(event.target.value))} /><output>{taglineSize}</output></label>}
-            <label className="font-select-control"><span>Fonte do nome</span><select value={nameFont} onChange={(event) => setNameFont(event.target.value)}><option value="">Escolher fonte principal</option>{fonts.map((font) => <option key={font.family} value={font.family}>{font.family}</option>)}</select></label>
-            {view !== "grid" && <label className="font-select-control"><span>Fonte da tagline</span><select value={taglineFont} onChange={(event) => setTaglineFont(event.target.value)}><option value="">Mesma fonte do nome</option>{fonts.map((font) => <option key={font.family} value={font.family}>{font.family}</option>)}</select></label>}
-            <label className="folder-upload secondary-button"><FolderUp /> Classificar por pastas<input ref={folderInput} type="file" multiple accept=".ttf,.otf,.woff,.woff2,.ttc" {...{ webkitdirectory: "" } as Record<string, string>} onChange={(event) => importFolder(event.target.files)} /></label>
-          </div>
-        </>}
+          <button className="secondary-button" onClick={() => setCategoriesOpen(true)}>Categorias</button>
+        </div>}
+        <div className="settings-row" aria-label="Controlos da grelha e do estudo">
+          {view !== "list" && <label className="range-control"><span>Grelha</span><input type="range" min="1" max="12" value={columns} onChange={(event) => setColumns(Number(event.target.value))} /><output>{columns}</output></label>}
+          {(view === "logo" || view === "study") && <label className="range-control"><span>Logo</span><input type="range" min="30" max="600" value={layout.logoSize} onChange={(event) => updateLayout("logoSize", Number(event.target.value))} /><output>{layout.logoSize}px</output></label>}
+          <label className="range-control"><span>Name</span><input type="range" min="20" max="160" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} /><output>{fontSize}px</output></label>
+          {view !== "grid" && <label className="range-control"><span>Tagline</span><input type="range" min="10" max="100" value={taglineSize} onChange={(event) => setTaglineSize(Number(event.target.value))} /><output>{taglineSize}px</output></label>}
+          {(view === "logo" || view === "study") && <>
+            <label className="range-control"><span>Espaço Logo</span><input type="range" min="-120" max="420" value={layout.logoOffset} onChange={(event) => updateLayout("logoOffset", Number(event.target.value))} /><output>{layout.logoOffset}px</output></label>
+            <label className="range-control"><span>Espaço Name</span><input type="range" min="-180" max="180" value={layout.nameOffset} onChange={(event) => updateLayout("nameOffset", Number(event.target.value))} /><output>{layout.nameOffset}px</output></label>
+            <label className="range-control"><span>Espaço Tagline</span><input type="range" min="-180" max="180" value={layout.taglineOffset} onChange={(event) => updateLayout("taglineOffset", Number(event.target.value))} /><output>{layout.taglineOffset}px</output></label>
+          </>}
+          <label className="range-control"><span>Peso</span><input type="range" min="100" max="900" step="100" value={fontWeight} onChange={(event) => setFontWeight(Number(event.target.value))} /><output>{fontWeight}</output></label>
+          <label className="font-select-control"><span>Fonte do nome</span><select value={nameFont} onChange={(event) => setNameFont(event.target.value)}><option value="">Escolher fonte principal</option>{fonts.map((font) => <option key={font.family} value={font.family}>{font.family}</option>)}</select></label>
+          {view !== "grid" && <label className="font-select-control"><span>Fonte da tagline</span><select value={taglineFont} onChange={(event) => setTaglineFont(event.target.value)}><option value="">Mesma fonte do nome</option>{fonts.map((font) => <option key={font.family} value={font.family}>{font.family}</option>)}</select></label>}
+          {view !== "study" && <button className="secondary-button classify-button" onClick={() => setClassifyOpen(true)}><FolderUp /> Classificar</button>}
+        </div>
       </header>
 
       <main className="font-main">
@@ -465,14 +470,8 @@ export function FontManager() {
             </div>
             <aside className="studio-controls" aria-label="Ajustes do estudo">
               <div className="studio-control-heading"><div><p className="eyebrow">Ajustes manuais</p><h3>Composição</h3></div><button className={`guide-toggle${showGuides ? " is-active" : ""}`} aria-pressed={showGuides} onClick={() => setShowGuides((current) => !current)}>Linhas-guia</button></div>
-              <label className="range-control range-control--wide"><span>Tamanho do nome</span><input type="range" min="20" max="140" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} /><output>{fontSize}px</output></label>
-              <label className="range-control range-control--wide"><span>Tamanho do logo</span><input type="range" min="40" max="260" value={layout.logoSize} onChange={(event) => updateLayout("logoSize", Number(event.target.value))} /><output>{layout.logoSize}px</output></label>
-              <label className="range-control range-control--wide"><span>Espaço logo / nome</span><input type="range" min="0" max="100" value={layout.logoGap} onChange={(event) => updateLayout("logoGap", Number(event.target.value))} /><output>{layout.logoGap}px</output></label>
-              <label className="range-control range-control--wide"><span>Posição do nome</span><input type="range" min="-80" max="80" value={layout.nameOffset} onChange={(event) => updateLayout("nameOffset", Number(event.target.value))} /><output>{layout.nameOffset}px</output></label>
-              <label className="range-control range-control--wide"><span>Espaço da tagline</span><input type="range" min="0" max="100" value={layout.taglineGap} onChange={(event) => updateLayout("taglineGap", Number(event.target.value))} /><output>{layout.taglineGap}px</output></label>
-              <label className="range-control range-control--wide"><span>Posição da tagline</span><input type="range" min="-80" max="80" value={layout.taglineOffset} onChange={(event) => updateLayout("taglineOffset", Number(event.target.value))} /><output>{layout.taglineOffset}px</output></label>
-              <label className="range-control range-control--wide"><span>Margem da área</span><input type="range" min="16" max="140" value={layout.margin} onChange={(event) => updateLayout("margin", Number(event.target.value))} /><output>{layout.margin}px</output></label>
-              <p className="control-note">As linhas-guia acompanham os ajustes e ajudam a alinhar manualmente o logótipo, o nome e a tagline.</p>
+              <label className="range-control range-control--wide"><span>Margem da área</span><input type="range" min="16" max="220" value={layout.margin} onChange={(event) => updateLayout("margin", Number(event.target.value))} /><output>{layout.margin}px</output></label>
+              <p className="control-note">Os cursores Grelha, Logo, Name, Tagline e Espaço estão no topo da página. As linhas-guia acompanham os ajustes manuais.</p>
             </aside>
           </div>
         </section>}
@@ -488,7 +487,7 @@ export function FontManager() {
           ) : view !== "study" && !fonts.length ? (
             <div className="empty-state"><span className="empty-state__icon"><Type /></span><h3>Começa pelas fontes instaladas</h3><p>Carrega as fontes do teu computador para ver as famílias, atribuir estilos e criar combinações. A leitura depende do Chrome ou Edge e da autorização do browser.</p><button className="primary-button" onClick={loadFonts}><Type /> Carregar fontes do Mac</button></div>
           ) : visibleItems.length === 0 ? (
-            <div className="empty-state empty-state--small"><h3>Nada por aqui</h3><p>Experimenta outro filtro ou pesquisa. As composições aparecem depois de guardares um coração N+T num cartão.</p></div>
+            <div className="empty-state empty-state--small"><h3>Nada por aqui</h3><p>Experimenta outro filtro ou pesquisa. As composições Happy aparecem depois de guardares um coração num cartão.</p></div>
           ) : (
             <div className={`font-grid${view === "list" ? " font-grid--list" : ""}`} style={{ "--font-cols": columns } as React.CSSProperties}>
               {visibleItems.map((item, index) => {
@@ -508,6 +507,7 @@ export function FontManager() {
                   fontWeight={fontWeight}
                   taglineSize={taglineSize}
                   taglineFontFamily={taglineFont}
+                  layout={layout}
                   logoData={logoData}
                   favoriteName={favorites.includes(font.family)}
                   favoriteTagline={taglineFavorites.includes(font.family)}
@@ -524,12 +524,13 @@ export function FontManager() {
               })}
             </div>
           )}
-          {view !== "study" && fonts.length > 0 && <div className="import-help"><FolderUp /><span>Organizaste as fontes em pastas por estilo? Carrega a pasta para classificar famílias já instaladas. A app associa nomes existentes, não instala nem duplica ficheiros.</span><button className="text-button" onClick={() => folderInput.current?.click()}>Escolher pasta</button></div>}
+          {view !== "study" && fonts.length > 0 && <div className="import-help"><FolderUp /><span>Organizaste as fontes em pastas por estilo? Carrega a pasta para classificar famílias já instaladas. A app associa nomes existentes, não instala nem duplica ficheiros.</span><button className="text-button" onClick={() => setClassifyOpen(true)}>Classificar</button></div>}
         </section>
         <footer className="app-footer"><span>Gestor de fontes</span><span>{libraryStatus}</span></footer>
       </main>
 
       <CategoriesDialog open={categoriesOpen} categories={categories} onClose={() => setCategoriesOpen(false)} onAdd={addCategory} onRename={renameCategory} onDelete={deleteCategory} onMove={moveCategory} />
+      <ClassifyDialog open={classifyOpen} categories={categories} onClose={() => setClassifyOpen(false)} onUploadCategory={(category, files) => { importFolder(files, category); setClassifyOpen(false) }} onUploadAll={(files) => { importFolder(files); setClassifyOpen(false) }} />
       <LibraryDialog open={libraryOpen} status={libraryStatus} onClose={() => setLibraryOpen(false)} onOpen={openLibrary} onCreate={createLibrary} onExport={exportLibrary} onImport={importLibrary} />
     </div>
   )
@@ -540,7 +541,12 @@ function normalize(value: string) {
 }
 
 function cleanFontFileName(filename: string) {
-  return filename.replace(/\.(ttf|otf|woff2?|ttc)$/i, "").replace(/[_-]+/g, " ").replace(/\b(regular|normal|book|medium|light|bold|black|thin|italic|oblique|semibold|demibold|extrabold|ultrabold|condensed|expanded|variable|roman|wght|weight|static)\b/gi, " ").replace(/\s+/g, " ").trim()
+  return filename
+    .replace(/\.(ttf|otf)$/i, "")
+    .replace(/(?:[\s_-]*(regular|normal|book|medium|light|bold|black|thin|italic|oblique|semibold|demibold|extrabold|ultrabold|condensed|expanded|variable|roman|wght|weight|static))+$/i, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
 }
 
 function compactName(value: string) {
@@ -548,7 +554,7 @@ function compactName(value: string) {
 }
 
 function resolveFolderCategory(folder: string, categoryByName: Map<string, string>) {
-  const normalized = normalize(folder)
+  const normalized = normalize(folder).replace(/^\d+\s*/, "")
   const exact = categoryByName.get(normalized)
   if (exact) return exact
   const aliases: Record<string, string[]> = {
