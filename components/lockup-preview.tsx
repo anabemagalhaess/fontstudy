@@ -1,5 +1,11 @@
 "use client"
 
+import { useRef } from "react"
+import type { StudyLayout } from "@/components/font-manager-types"
+
+type GuideKey = "nameOffset" | "taglineOffset" | "margin"
+type GuideDrag = { pointerId: number; startY: number; startValue: number }
+
 type LockupPreviewProps = {
   title: string
   tagline: string
@@ -12,16 +18,9 @@ type LockupPreviewProps = {
   showLogo?: boolean
   showTagline?: boolean
   compact?: boolean
-  layout?: {
-    logoSize: number
-    logoGap: number
-    logoOffset: number
-    taglineGap: number
-    nameOffset: number
-    taglineOffset: number
-    margin: number
-  }
+  layout?: StudyLayout
   showGuides?: boolean
+  onLayoutChange?: (key: GuideKey, value: number) => void
 }
 
 export function LockupPreview({
@@ -38,6 +37,7 @@ export function LockupPreview({
   compact = false,
   layout,
   showGuides = false,
+  onLayoutChange,
 }: LockupPreviewProps) {
   const styles = {
     "--preview-name-size": `${fontSize}px`,
@@ -49,9 +49,55 @@ export function LockupPreview({
     "--preview-margin": `${layout?.margin ?? 48}px`,
   } as React.CSSProperties
 
+  const renderGuide = (
+    label: string,
+    key: GuideKey,
+    value: number,
+    min: number,
+    max: number,
+    direction: number,
+    className: string,
+  ) => (
+    <button
+      type="button"
+      role="slider"
+      aria-label={`${label}, ${value} píxeis. Arrasta para ajustar.`}
+      aria-orientation="vertical"
+      aria-valuemin={min}
+      aria-valuemax={max}
+      aria-valuenow={value}
+      className={`preview-guide ${className}`}
+      onPointerDown={(event) => {
+        event.currentTarget.setPointerCapture(event.pointerId)
+        drag.current = { pointerId: event.pointerId, startY: event.clientY, startValue: value }
+      }}
+      onPointerMove={(event) => {
+        const activeDrag = drag.current
+        if (!activeDrag || activeDrag.pointerId !== event.pointerId) return
+        const delta = (event.clientY - activeDrag.startY) * direction
+        onLayoutChange?.(key, Math.max(min, Math.min(max, Math.round(activeDrag.startValue + delta))))
+      }}
+      onPointerUp={(event) => {
+        if (drag.current?.pointerId === event.pointerId) drag.current = null
+      }}
+      onPointerCancel={() => { drag.current = null }}
+      onKeyDown={(event) => {
+        if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return
+        event.preventDefault()
+        const step = event.shiftKey ? 10 : 1
+        const change = (event.key === "ArrowUp" ? -step : step) * direction
+        onLayoutChange?.(key, Math.max(min, Math.min(max, value + change)))
+      }}
+    >
+      <span>{label}</span>
+    </button>
+  )
+
+  const drag = useRef<GuideDrag | null>(null)
+
   return (
     <div className={`lockup-preview${compact ? " lockup-preview--compact" : ""}${showGuides ? " has-guides" : ""}`} style={styles}>
-      {showGuides && <div className="preview-guide preview-guide--top" aria-hidden="true"><span>margem</span></div>}
+      {showGuides && renderGuide("margem superior", "margin", layout?.margin ?? 48, 16, 220, 1, "preview-guide--top")}
       <div className="lockup-preview__content">
         {showLogo && logoData && (
           <img
@@ -61,20 +107,20 @@ export function LockupPreview({
             style={{ width: layout ? `${layout.logoSize}px` : undefined, marginBottom: layout ? `${layout.logoGap}px` : undefined, transform: `translateY(${layout?.logoOffset ?? 0}px)` }}
           />
         )}
-        {showGuides && <div className="preview-guide preview-guide--name" aria-hidden="true"><span>linha do nome</span></div>}
+        {showGuides && renderGuide("linha do nome", "nameOffset", layout?.nameOffset ?? 0, -180, 180, 1, "preview-guide--name")}
         <span className="lockup-preview__name" style={{ fontFamily: `"${fontFamily}", sans-serif`, transform: `translateY(${layout?.nameOffset ?? 0}px)` }}>
           {title || "O teu nome"}
         </span>
         {showTagline && tagline && (
           <>
-            {showGuides && <div className="preview-guide preview-guide--tagline" aria-hidden="true"><span>linha da tagline</span></div>}
+            {showGuides && renderGuide("linha da tagline", "taglineOffset", layout?.taglineOffset ?? 0, -180, 180, 1, "preview-guide--tagline")}
             <span className="lockup-preview__tagline" style={{ fontFamily: `"${taglineFontFamily || fontFamily}", sans-serif`, transform: `translateY(${layout?.taglineOffset ?? 0}px)` }}>
               {tagline}
             </span>
           </>
         )}
       </div>
-      {showGuides && <div className="preview-guide preview-guide--bottom" aria-hidden="true"><span>área segura</span></div>}
+      {showGuides && renderGuide("margem inferior", "margin", layout?.margin ?? 48, 16, 220, -1, "preview-guide--bottom")}
     </div>
   )
 }

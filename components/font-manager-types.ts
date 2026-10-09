@@ -12,6 +12,23 @@ export type FontLibrary = {
   tfont: string
   nfont: string
   combos: FavoriteCombo[]
+  preferences?: {
+    view: ViewMode
+    filter: string
+    query: string
+    columns: number
+    studyFamilies: string[]
+    layout: StudyLayout
+    dark: boolean
+    title: string
+    tagline: string
+    fontSize: number
+    taglineSize: number
+    fontWeight: number
+    logoData: string
+    showGuides: boolean
+    studioExpanded: boolean
+  }
 }
 export const UNCATEGORIZED = "Sem classificar"
 export const DEFAULT_CATEGORIES = ["Serif", "Sem serif", "Manuscrita", "Display", "Mono"]
