@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Download, FolderUp, Heart, ImagePlus, Moon, Search, Star, Sun, Type, X } from "lucide-react"
+import { Download, Eye, EyeOff, FolderUp, Heart, ImagePlus, Moon, Search, Star, Sun, Type, X } from "lucide-react"
 import { CategoriesDialog } from "@/components/categories-dialog"
 import { ClassifyDialog } from "@/components/classify-dialog"
 import { FontCard } from "@/components/font-card"
@@ -67,6 +67,7 @@ export function FontManager() {
   const [logoData, setLogoData] = useState("")
   const [layout, setLayout] = useState<StudyLayout>(INITIAL_LAYOUT)
   const [showGuides, setShowGuides] = useState(true)
+  const [studioExpanded, setStudioExpanded] = useState(true)
   const [dark, setDark] = useState(false)
   const [fontStatus, setFontStatus] = useState("Carrega as fontes instaladas para começar")
   const [notice, setNotice] = useState("")
@@ -90,6 +91,24 @@ export function FontManager() {
     setFavoriteCombos(Array.isArray(library.combos) ? library.combos : [])
     setTaglineFont(typeof library.tfont === "string" ? library.tfont : "")
     setNameFont(typeof library.nfont === "string" ? library.nfont : "")
+    const preferences = library.preferences
+    if (preferences) {
+      if (VIEW_OPTIONS.some((item) => item.id === preferences.view)) setView(preferences.view)
+      if (typeof preferences.filter === "string") setFilter(preferences.filter)
+      if (typeof preferences.query === "string") setQuery(preferences.query)
+      if (Number.isFinite(preferences.columns)) setColumns(Math.max(1, Math.min(12, preferences.columns)))
+      if (Array.isArray(preferences.studyFamilies)) setStudyFamilies(preferences.studyFamilies)
+      if (preferences.layout && typeof preferences.layout === "object") setLayout({ ...INITIAL_LAYOUT, ...preferences.layout })
+      if (typeof preferences.dark === "boolean") setDark(preferences.dark)
+      if (typeof preferences.title === "string") setTitle(preferences.title)
+      if (typeof preferences.tagline === "string") setTagline(preferences.tagline)
+      if (Number.isFinite(preferences.fontSize)) setFontSize(preferences.fontSize)
+      if (Number.isFinite(preferences.taglineSize)) setTaglineSize(preferences.taglineSize)
+      if (Number.isFinite(preferences.fontWeight)) setFontWeight(preferences.fontWeight)
+      if (typeof preferences.logoData === "string") setLogoData(preferences.logoData)
+      if (typeof preferences.showGuides === "boolean") setShowGuides(preferences.showGuides)
+      if (typeof preferences.studioExpanded === "boolean") setStudioExpanded(preferences.studioExpanded)
+    }
   }, [])
 
   useEffect(() => {
@@ -99,13 +118,25 @@ export function FontManager() {
         const saved = localStorage.getItem("fontes-lib")
         if (saved) applyLibrary(JSON.parse(saved))
         const preferences = JSON.parse(localStorage.getItem("fontes-preferencias") || "{}") as {
-          view?: ViewMode; columns?: number; studyFamilies?: string[]; layout?: StudyLayout; dark?: boolean
+          view?: ViewMode; filter?: string; query?: string; columns?: number; studyFamilies?: string[]; layout?: StudyLayout; dark?: boolean
+          title?: string; tagline?: string; fontSize?: number; taglineSize?: number; fontWeight?: number
+          logoData?: string; showGuides?: boolean; studioExpanded?: boolean
         }
         if (preferences.view && VIEW_OPTIONS.some((item) => item.id === preferences.view)) setView(preferences.view)
+        if (typeof preferences.filter === "string") setFilter(preferences.filter)
+        if (typeof preferences.query === "string") setQuery(preferences.query)
         if (preferences.columns) setColumns(Math.max(1, Math.min(12, preferences.columns)))
         if (Array.isArray(preferences.studyFamilies)) setStudyFamilies(preferences.studyFamilies)
         if (preferences.layout) setLayout({ ...INITIAL_LAYOUT, ...preferences.layout })
         if (typeof preferences.dark === "boolean") setDark(preferences.dark)
+        if (typeof preferences.title === "string") setTitle(preferences.title)
+        if (typeof preferences.tagline === "string") setTagline(preferences.tagline)
+        if (Number.isFinite(preferences.fontSize)) setFontSize(preferences.fontSize!)
+        if (Number.isFinite(preferences.taglineSize)) setTaglineSize(preferences.taglineSize!)
+        if (Number.isFinite(preferences.fontWeight)) setFontWeight(preferences.fontWeight!)
+        if (typeof preferences.logoData === "string") setLogoData(preferences.logoData)
+        if (typeof preferences.showGuides === "boolean") setShowGuides(preferences.showGuides)
+        if (typeof preferences.studioExpanded === "boolean") setStudioExpanded(preferences.studioExpanded)
         const dbRequest = indexedDB.open("fontes-lib", 1)
         dbRequest.onupgradeneeded = () => dbRequest.result.createObjectStore("k")
         dbRequest.onsuccess = async () => {
@@ -115,12 +146,13 @@ export function FontManager() {
             getRequest.onsuccess = async () => {
               const handle = getRequest.result as LocalFontHandle | undefined
               if (!handle || cancelled) return
-              setLibraryHandle(handle)
               if (await handle.queryPermission({ mode: "readwrite" }) === "granted") {
                 const data = JSON.parse(await (await handle.getFile()).text())
                 applyLibrary(data)
+                setLibraryHandle(handle)
                 setLibraryStatus(`Ligada a ${handle.name}. As alterações são gravadas automaticamente.`)
               } else {
+                setLibraryHandle(handle)
                 setLibraryStatus(`Biblioteca ${handle.name} guardada. Reativa o acesso para continuar a sincronizar.`)
               }
             }
@@ -149,11 +181,28 @@ export function FontManager() {
     tfont: taglineFont,
     nfont: nameFont,
     combos: favoriteCombos,
-  }), [categories, tags, favorites, taglineFavorites, taglineFont, nameFont, favoriteCombos])
+    preferences: {
+      view,
+      filter,
+      query,
+      columns,
+      studyFamilies,
+      layout,
+      dark,
+      title,
+      tagline,
+      fontSize,
+      taglineSize,
+      fontWeight,
+      logoData,
+      showGuides,
+      studioExpanded,
+    },
+  }), [categories, tags, favorites, taglineFavorites, taglineFont, nameFont, favoriteCombos, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded])
 
   useEffect(() => {
     if (!hydrated) return
-    const preferences = { view, columns, studyFamilies, layout, dark }
+    const preferences = { view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, showGuides, studioExpanded }
     try {
       localStorage.setItem("fontes-lib", JSON.stringify(snapshot))
       localStorage.setItem("fontes-preferencias", JSON.stringify(preferences))
@@ -173,7 +222,7 @@ export function FontManager() {
       }
     }, 450)
     return () => window.clearTimeout(timeout)
-  }, [snapshot, hydrated, libraryHandle, view, columns, studyFamilies, layout, dark])
+  }, [snapshot, hydrated, libraryHandle, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded])
 
   const loadFonts = async () => {
     const fontWindow = window as FontManagerWindow
@@ -228,7 +277,6 @@ export function FontManager() {
   }, [view, selectedFamilies, filter, favoriteCombos, normalizedQuery, fontMap, fonts, favorites, taglineFavorites, tags, categories])
 
   const updateLibraryHandle = async (handle: LocalFontHandle) => {
-    setLibraryHandle(handle)
     const permission = await handle.queryPermission({ mode: "readwrite" })
     const allowed = permission === "granted" || await handle.requestPermission({ mode: "readwrite" }) === "granted"
     if (!allowed) {
@@ -238,6 +286,7 @@ export function FontManager() {
     try {
       const file = await handle.getFile()
       if (file.size > 0) applyLibrary(JSON.parse(await file.text()))
+      setLibraryHandle(handle)
       const request = indexedDB.open("fontes-lib", 1)
       request.onupgradeneeded = () => request.result.createObjectStore("k")
       request.onsuccess = () => {
@@ -447,8 +496,8 @@ export function FontManager() {
           {(view === "logo" || view === "study") && <label className="range-control"><span>Logo</span><input type="range" min="30" max="600" value={layout.logoSize} onChange={(event) => updateLayout("logoSize", Number(event.target.value))} /><output>{layout.logoSize}px</output></label>}
           <label className="range-control"><span>Name</span><input type="range" min="20" max="160" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} /><output>{fontSize}px</output></label>
           {view !== "grid" && <label className="range-control"><span>Tagline</span><input type="range" min="10" max="100" value={taglineSize} onChange={(event) => setTaglineSize(Number(event.target.value))} /><output>{taglineSize}px</output></label>}
-          {(view === "logo" || view === "study") && <>
-            <label className="range-control"><span>Espaço Logo</span><input type="range" min="-120" max="420" value={layout.logoOffset} onChange={(event) => updateLayout("logoOffset", Number(event.target.value))} /><output>{layout.logoOffset}px</output></label>
+          {(view === "tagline" || view === "logo" || view === "study") && <>
+            {(view === "logo" || view === "study") && <label className="range-control"><span>Espaço Logo</span><input type="range" min="-120" max="420" value={layout.logoOffset} onChange={(event) => updateLayout("logoOffset", Number(event.target.value))} /><output>{layout.logoOffset}px</output></label>}
             <label className="range-control"><span>Espaço Name</span><input type="range" min="-180" max="180" value={layout.nameOffset} onChange={(event) => updateLayout("nameOffset", Number(event.target.value))} /><output>{layout.nameOffset}px</output></label>
             <label className="range-control"><span>Espaço Tagline</span><input type="range" min="-180" max="180" value={layout.taglineOffset} onChange={(event) => updateLayout("taglineOffset", Number(event.target.value))} /><output>{layout.taglineOffset}px</output></label>
           </>}
@@ -462,16 +511,16 @@ export function FontManager() {
       <main className="font-main">
         {notice && <div className="notice" role="status"><span>{notice}</span><button className="icon-button" onClick={() => setNotice("")} aria-label="Fechar aviso"><X /></button></div>}
         {(view === "logo" || view === "study") && <section className="studio-section" aria-labelledby="studio-heading">
-          <div className="studio-heading"><div><p className="eyebrow">{view === "study" ? "Seleção de marca" : "Pré-visualização"}</p><h2 id="studio-heading">{view === "study" ? "Logo Study" : "Estudo de identidade"}</h2></div><div className="studio-heading__meta"><span>{activeFont?.family || "Escolhe uma fonte"}</span>{view === "study" && <span className="study-count">{studyFamilies.length} selecionadas</span>}</div></div>
-          <div className={`studio-layout${view === "study" ? " studio-layout--study" : ""}`}>
+          <div className="studio-heading"><div><p className="eyebrow">{view === "study" ? "Seleção de marca" : "Pré-visualização"}</p><h2 id="studio-heading">{view === "study" ? "Logo Study" : "Estudo de identidade"}</h2></div><div className="studio-heading__meta">{view === "logo" && <button className="icon-button studio-visibility-toggle" aria-label={studioExpanded ? "Ocultar estudo de identidade" : "Mostrar estudo de identidade"} title={studioExpanded ? "Ocultar estudo" : "Mostrar estudo"} aria-expanded={studioExpanded} aria-controls="identity-study-content" onClick={() => setStudioExpanded((current) => !current)}>{studioExpanded ? <EyeOff /> : <Eye />}</button>}<span>{activeFont?.family || "Escolhe uma fonte"}</span>{view === "study" && <span className="study-count">{studyFamilies.length} selecionadas</span>}</div></div>
+          <div id="identity-study-content" hidden={view === "logo" && !studioExpanded} className={`studio-layout${view === "study" ? " studio-layout--study" : ""}`}>
             <div className="studio-canvas" style={{ "--studio-margin": `${layout.margin}px` } as React.CSSProperties}>
-              <LockupPreview title={title} tagline={tagline} fontFamily={activeFont?.family || nameFont || "sans-serif"} taglineFontFamily={taglineFont || activeFont?.family || "sans-serif"} fontSize={fontSize} fontWeight={fontWeight} taglineSize={taglineSize} logoData={logoData} showLogo={view === "study" || view === "logo"} showTagline={view === "study" || view === "logo"} layout={layout} showGuides={view === "study" && showGuides} />
+              <LockupPreview title={title} tagline={tagline} fontFamily={activeFont?.family || nameFont || "sans-serif"} taglineFontFamily={taglineFont || activeFont?.family || "sans-serif"} fontSize={fontSize} fontWeight={fontWeight} taglineSize={taglineSize} logoData={logoData} showLogo={view === "study" || view === "logo"} showTagline={view === "study" || view === "logo"} layout={layout} showGuides={view === "study" && showGuides} onLayoutChange={updateLayout} />
               <div className="canvas-caption"><span>Pré-visualização em tempo real</span><span>{activeFont?.family || "Sem fonte selecionada"}</span></div>
             </div>
             <aside className="studio-controls" aria-label="Ajustes do estudo">
               <div className="studio-control-heading"><div><p className="eyebrow">Ajustes manuais</p><h3>Composição</h3></div><button className={`guide-toggle${showGuides ? " is-active" : ""}`} aria-pressed={showGuides} onClick={() => setShowGuides((current) => !current)}>Linhas-guia</button></div>
               <label className="range-control range-control--wide"><span>Margem da área</span><input type="range" min="16" max="220" value={layout.margin} onChange={(event) => updateLayout("margin", Number(event.target.value))} /><output>{layout.margin}px</output></label>
-              <p className="control-note">Os cursores Grelha, Logo, Name, Tagline e Espaço estão no topo da página. As linhas-guia acompanham os ajustes manuais.</p>
+              <p className="control-note">Arrasta as linhas do nome, tagline e margens para ajustar a composição. Também podes usar as setas do teclado quando uma linha estiver selecionada.</p>
             </aside>
           </div>
         </section>}
