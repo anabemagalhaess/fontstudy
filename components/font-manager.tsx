@@ -598,7 +598,19 @@ export function FontManager() {
 
   const resetViewControls = () => {
     if (view === "study") {
-      setStudySettings(INITIAL_STUDY_SETTINGS)
+      setStudySettings((current) => ({
+        ...INITIAL_STUDY_SETTINGS,
+        layout: {
+          ...INITIAL_LAYOUT,
+          margin: current.layout.margin,
+          guideTop: current.layout.guideTop,
+          guideName: current.layout.guideName,
+          guideTagline: current.layout.guideTagline,
+          guideBottom: current.layout.guideBottom,
+          guideLeft: current.layout.guideLeft,
+          guideRight: current.layout.guideRight,
+        },
+      }))
       return
     }
     setColumns(5)
