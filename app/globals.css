@@ -212,6 +212,7 @@
 .view-row { display: flex; gap: 12px; align-items: center; margin-top: 20px; }
 .view-modes { display: flex; align-items: center; gap: 14px; }
 .view-tabs { display: inline-flex; flex-wrap: wrap; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 9px; background: var(--subtle); }
+.view-tab--study { align-self: stretch; }
 .view-tab { min-height: 36px; padding: 0 13px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; font-size: 13px; color: var(--muted-ink) !important; }
 .view-tab:hover { color: var(--ink) !important; }
 .view-tab--study { border: 1px solid var(--line); background: var(--paper); }
