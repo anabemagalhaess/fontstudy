@@ -7,7 +7,7 @@ import { ClassifyDialog } from "@/components/classify-dialog"
 import { FontCard } from "@/components/font-card"
 import { LibraryDialog } from "@/components/library-dialog"
 import { LockupPreview } from "@/components/lockup-preview"
-import { DEFAULT_CATEGORIES, UNCATEGORIZED, type FavoriteCombo, type FontFamily, type FontLibrary, type StudyLayout, type ViewMode } from "@/components/font-manager-types"
+import { DEFAULT_CATEGORIES, UNCATEGORIZED, type FavoriteCombo, type FontFamily, type FontLibrary, type StudyLayout, type StudySettings, type ViewMode } from "@/components/font-manager-types"
 
 type LocalFont = { family: string; style: string }
 type LocalFontHandle = {
@@ -33,6 +33,7 @@ const VIEW_OPTIONS: ViewOption[] = [
   { id: "study", label: "Logo Study" },
 ]
 const INITIAL_LAYOUT: StudyLayout = { logoSize: 86, logoGap: 24, logoOffset: 0, taglineGap: 22, nameOffset: 0, taglineOffset: 0, margin: 52 }
+const INITIAL_STUDY_SETTINGS: StudySettings = { columns: 5, layout: INITIAL_LAYOUT, fontSize: 58, taglineSize: 24, fontWeight: 400 }
 const EMPTY_LIBRARY: FontLibrary = {
   app: "fontes-biblioteca",
   version: 1,
@@ -66,6 +67,7 @@ export function FontManager() {
   const [columns, setColumns] = useState(5)
   const [logoData, setLogoData] = useState("")
   const [layout, setLayout] = useState<StudyLayout>(INITIAL_LAYOUT)
+  const [studySettings, setStudySettings] = useState<StudySettings>(INITIAL_STUDY_SETTINGS)
   const [showGuides, setShowGuides] = useState(true)
   const [studioExpanded, setStudioExpanded] = useState(true)
   const [dark, setDark] = useState(false)
@@ -99,6 +101,17 @@ export function FontManager() {
       if (Number.isFinite(preferences.columns)) setColumns(Math.max(1, Math.min(12, preferences.columns)))
       if (Array.isArray(preferences.studyFamilies)) setStudyFamilies(preferences.studyFamilies)
       if (preferences.layout && typeof preferences.layout === "object") setLayout({ ...INITIAL_LAYOUT, ...preferences.layout })
+      if (preferences.studySettings && typeof preferences.studySettings === "object") {
+        setStudySettings({ ...INITIAL_STUDY_SETTINGS, ...preferences.studySettings, layout: { ...INITIAL_LAYOUT, ...preferences.studySettings.layout } })
+      } else {
+        setStudySettings({
+          columns: preferences.columns ?? INITIAL_STUDY_SETTINGS.columns,
+          layout: { ...INITIAL_LAYOUT, ...preferences.layout },
+          fontSize: preferences.fontSize ?? INITIAL_STUDY_SETTINGS.fontSize,
+          taglineSize: preferences.taglineSize ?? INITIAL_STUDY_SETTINGS.taglineSize,
+          fontWeight: preferences.fontWeight ?? INITIAL_STUDY_SETTINGS.fontWeight,
+        })
+      }
       if (typeof preferences.dark === "boolean") setDark(preferences.dark)
       if (typeof preferences.title === "string") setTitle(preferences.title)
       if (typeof preferences.tagline === "string") setTagline(preferences.tagline)
@@ -120,7 +133,7 @@ export function FontManager() {
         const preferences = JSON.parse(localStorage.getItem("fontes-preferencias") || "{}") as {
           view?: ViewMode; filter?: string; query?: string; columns?: number; studyFamilies?: string[]; layout?: StudyLayout; dark?: boolean
           title?: string; tagline?: string; fontSize?: number; taglineSize?: number; fontWeight?: number
-          logoData?: string; showGuides?: boolean; studioExpanded?: boolean
+          logoData?: string; showGuides?: boolean; studioExpanded?: boolean; studySettings?: StudySettings
         }
         if (preferences.view && VIEW_OPTIONS.some((item) => item.id === preferences.view)) setView(preferences.view)
         if (typeof preferences.filter === "string") setFilter(preferences.filter)
@@ -128,6 +141,17 @@ export function FontManager() {
         if (preferences.columns) setColumns(Math.max(1, Math.min(12, preferences.columns)))
         if (Array.isArray(preferences.studyFamilies)) setStudyFamilies(preferences.studyFamilies)
         if (preferences.layout) setLayout({ ...INITIAL_LAYOUT, ...preferences.layout })
+        if (preferences.studySettings) {
+          setStudySettings({ ...INITIAL_STUDY_SETTINGS, ...preferences.studySettings, layout: { ...INITIAL_LAYOUT, ...preferences.studySettings.layout } })
+        } else {
+          setStudySettings({
+            columns: preferences.columns ?? INITIAL_STUDY_SETTINGS.columns,
+            layout: { ...INITIAL_LAYOUT, ...preferences.layout },
+            fontSize: preferences.fontSize ?? INITIAL_STUDY_SETTINGS.fontSize,
+            taglineSize: preferences.taglineSize ?? INITIAL_STUDY_SETTINGS.taglineSize,
+            fontWeight: preferences.fontWeight ?? INITIAL_STUDY_SETTINGS.fontWeight,
+          })
+        }
         if (typeof preferences.dark === "boolean") setDark(preferences.dark)
         if (typeof preferences.title === "string") setTitle(preferences.title)
         if (typeof preferences.tagline === "string") setTagline(preferences.tagline)
@@ -197,12 +221,13 @@ export function FontManager() {
       logoData,
       showGuides,
       studioExpanded,
+      studySettings,
     },
-  }), [categories, tags, favorites, taglineFavorites, taglineFont, nameFont, favoriteCombos, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded])
+  }), [categories, tags, favorites, taglineFavorites, taglineFont, nameFont, favoriteCombos, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded, studySettings])
 
   useEffect(() => {
     if (!hydrated) return
-    const preferences = { view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, showGuides, studioExpanded }
+    const preferences = { view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, showGuides, studioExpanded, studySettings }
     try {
       localStorage.setItem("fontes-lib", JSON.stringify(snapshot))
       localStorage.setItem("fontes-preferencias", JSON.stringify(preferences))
@@ -222,7 +247,7 @@ export function FontManager() {
       }
     }, 450)
     return () => window.clearTimeout(timeout)
-  }, [snapshot, hydrated, libraryHandle, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded])
+  }, [snapshot, hydrated, libraryHandle, view, filter, query, columns, studyFamilies, layout, dark, title, tagline, fontSize, taglineSize, fontWeight, logoData, showGuides, studioExpanded, studySettings])
 
   const loadFonts = async () => {
     const fontWindow = window as FontManagerWindow
@@ -251,6 +276,11 @@ export function FontManager() {
 
   const fontMap = useMemo(() => new Map(fonts.map((font) => [font.family, font])), [fonts])
   const activeFont = fontMap.get(nameFont) || fonts[0]
+  const activeColumns = view === "study" ? studySettings.columns : columns
+  const activeLayout = view === "study" ? studySettings.layout : layout
+  const activeFontSize = view === "study" ? studySettings.fontSize : fontSize
+  const activeTaglineSize = view === "study" ? studySettings.taglineSize : taglineSize
+  const activeFontWeight = view === "study" ? studySettings.fontWeight : fontWeight
   const selectedFamilies = view === "study" ? studyFamilies : fonts.map((font) => font.family)
   const normalizedQuery = query.trim().toLocaleLowerCase("pt-PT")
   const visibleItems = useMemo<Array<{ font: FontFamily; combo?: FavoriteCombo }>>(() => {
@@ -448,7 +478,25 @@ export function FontManager() {
     if (next === "study") setFilter("Todas")
   }
 
-  const updateLayout = (key: keyof StudyLayout, value: number) => setLayout((current) => ({ ...current, [key]: value }))
+  const updateLayout = (key: keyof StudyLayout, value: number) => {
+    if (view === "study") {
+      setStudySettings((current) => ({ ...current, layout: { ...current.layout, [key]: value } }))
+      return
+    }
+    setLayout((current) => ({ ...current, [key]: value }))
+  }
+  const updateColumns = (value: number) => view === "study"
+    ? setStudySettings((current) => ({ ...current, columns: value }))
+    : setColumns(value)
+  const updateNameSize = (value: number) => view === "study"
+    ? setStudySettings((current) => ({ ...current, fontSize: value }))
+    : setFontSize(value)
+  const updateTaglineSize = (value: number) => view === "study"
+    ? setStudySettings((current) => ({ ...current, taglineSize: value }))
+    : setTaglineSize(value)
+  const updateFontWeight = (value: number) => view === "study"
+    ? setStudySettings((current) => ({ ...current, fontWeight: value }))
+    : setFontWeight(value)
   const categoryFilters = ["Todas", "Favoritos do nome", "Favoritos da tagline", "Composições", ...categories, UNCATEGORIZED]
   const chipCount = (item: string) => {
     if (item === "Todas") return fonts.length
@@ -492,16 +540,16 @@ export function FontManager() {
           <button className="secondary-button" onClick={() => setCategoriesOpen(true)}>Categorias</button>
         </div>}
         <div className="settings-row" aria-label="Controlos da grelha e do estudo">
-          {view !== "list" && <label className="range-control"><span>Grelha</span><input type="range" min="1" max="12" value={columns} onChange={(event) => setColumns(Number(event.target.value))} /><output>{columns}</output></label>}
-          {(view === "logo" || view === "study") && <label className="range-control"><span>Logo</span><input type="range" min="30" max="600" value={layout.logoSize} onChange={(event) => updateLayout("logoSize", Number(event.target.value))} /><output>{layout.logoSize}px</output></label>}
-          <label className="range-control"><span>Name</span><input type="range" min="20" max="160" value={fontSize} onChange={(event) => setFontSize(Number(event.target.value))} /><output>{fontSize}px</output></label>
-          {view !== "grid" && <label className="range-control"><span>Tagline</span><input type="range" min="10" max="100" value={taglineSize} onChange={(event) => setTaglineSize(Number(event.target.value))} /><output>{taglineSize}px</output></label>}
+          {view !== "list" && <label className="range-control"><span>Grelha</span><input type="range" min="1" max="12" value={activeColumns} onChange={(event) => updateColumns(Number(event.target.value))} /><output>{activeColumns}</output></label>}
+          {(view === "logo" || view === "study") && <label className="range-control"><span>Logo</span><input type="range" min="30" max="600" value={activeLayout.logoSize} onChange={(event) => updateLayout("logoSize", Number(event.target.value))} /><output>{activeLayout.logoSize}px</output></label>}
+          <label className="range-control"><span>Name</span><input type="range" min="20" max="160" value={activeFontSize} onChange={(event) => updateNameSize(Number(event.target.value))} /><output>{activeFontSize}px</output></label>
+          {view !== "grid" && <label className="range-control"><span>Tagline</span><input type="range" min="10" max="120" value={activeTaglineSize} onChange={(event) => updateTaglineSize(Number(event.target.value))} /><output>{activeTaglineSize}px</output></label>}
           {(view === "tagline" || view === "logo" || view === "study") && <>
-            {(view === "logo" || view === "study") && <label className="range-control"><span>Espaço Logo</span><input type="range" min="-120" max="420" value={layout.logoOffset} onChange={(event) => updateLayout("logoOffset", Number(event.target.value))} /><output>{layout.logoOffset}px</output></label>}
-            <label className="range-control"><span>Espaço Name</span><input type="range" min="-180" max="180" value={layout.nameOffset} onChange={(event) => updateLayout("nameOffset", Number(event.target.value))} /><output>{layout.nameOffset}px</output></label>
-            <label className="range-control"><span>Espaço Tagline</span><input type="range" min="-180" max="180" value={layout.taglineOffset} onChange={(event) => updateLayout("taglineOffset", Number(event.target.value))} /><output>{layout.taglineOffset}px</output></label>
+            {(view === "logo" || view === "study") && <label className="range-control"><span>Espaço Logo</span><input type="range" min="-120" max="420" value={activeLayout.logoOffset} onChange={(event) => updateLayout("logoOffset", Number(event.target.value))} /><output>{activeLayout.logoOffset}px</output></label>}
+            <label className="range-control"><span>Espaço Name</span><input type="range" min="-180" max="180" value={activeLayout.nameOffset} onChange={(event) => updateLayout("nameOffset", Number(event.target.value))} /><output>{activeLayout.nameOffset}px</output></label>
+            <label className="range-control"><span>Espaço Tagline</span><input type="range" min="-180" max="180" value={activeLayout.taglineOffset} onChange={(event) => updateLayout("taglineOffset", Number(event.target.value))} /><output>{activeLayout.taglineOffset}px</output></label>
           </>}
-          <label className="range-control"><span>Peso</span><input type="range" min="100" max="900" step="100" value={fontWeight} onChange={(event) => setFontWeight(Number(event.target.value))} /><output>{fontWeight}</output></label>
+          <label className="range-control"><span>Peso</span><input type="range" min="100" max="900" step="100" value={activeFontWeight} onChange={(event) => updateFontWeight(Number(event.target.value))} /><output>{activeFontWeight}</output></label>
           <label className="font-select-control"><span>Fonte do nome</span><select value={nameFont} onChange={(event) => setNameFont(event.target.value)}><option value="">Escolher fonte principal</option>{fonts.map((font) => <option key={font.family} value={font.family}>{font.family}</option>)}</select></label>
           {view !== "grid" && <label className="font-select-control"><span>Fonte da tagline</span><select value={taglineFont} onChange={(event) => setTaglineFont(event.target.value)}><option value="">Mesma fonte do nome</option>{fonts.map((font) => <option key={font.family} value={font.family}>{font.family}</option>)}</select></label>}
           {view !== "study" && <button className="secondary-button classify-button" onClick={() => setClassifyOpen(true)}><FolderUp /> Classificar</button>}
@@ -513,8 +561,8 @@ export function FontManager() {
         {(view === "logo" || view === "study") && <section className="studio-section" aria-labelledby="studio-heading">
           <div className="studio-heading"><div><p className="eyebrow">{view === "study" ? "Seleção de marca" : "Pré-visualização"}</p><h2 id="studio-heading">{view === "study" ? "Logo Study" : "Estudo de identidade"}</h2></div><div className="studio-heading__meta">{view === "logo" && <button className="icon-button studio-visibility-toggle" aria-label={studioExpanded ? "Ocultar estudo de identidade" : "Mostrar estudo de identidade"} title={studioExpanded ? "Ocultar estudo" : "Mostrar estudo"} aria-expanded={studioExpanded} aria-controls="identity-study-content" onClick={() => setStudioExpanded((current) => !current)}>{studioExpanded ? <EyeOff /> : <Eye />}</button>}<span>{activeFont?.family || "Escolhe uma fonte"}</span>{view === "study" && <span className="study-count">{studyFamilies.length} selecionadas</span>}</div></div>
           <div id="identity-study-content" hidden={view === "logo" && !studioExpanded} className={`studio-layout${view === "study" ? " studio-layout--study" : ""}`}>
-            <div className="studio-canvas" style={{ "--studio-margin": `${layout.margin}px` } as React.CSSProperties}>
-              <LockupPreview title={title} tagline={tagline} fontFamily={activeFont?.family || nameFont || "sans-serif"} taglineFontFamily={taglineFont || activeFont?.family || "sans-serif"} fontSize={fontSize} fontWeight={fontWeight} taglineSize={taglineSize} logoData={logoData} showLogo={view === "study" || view === "logo"} showTagline={view === "study" || view === "logo"} layout={layout} showGuides={view === "study" && showGuides} onLayoutChange={updateLayout} />
+            <div className="studio-canvas" style={{ "--studio-margin": `${activeLayout.margin}px` } as React.CSSProperties}>
+              <LockupPreview title={title} tagline={tagline} fontFamily={activeFont?.family || nameFont || "sans-serif"} taglineFontFamily={taglineFont || activeFont?.family || "sans-serif"} fontSize={activeFontSize} fontWeight={activeFontWeight} taglineSize={activeTaglineSize} logoData={logoData} showLogo={view === "study" || view === "logo"} showTagline={view === "study" || view === "logo"} layout={activeLayout} showGuides={view === "study" && showGuides} onLayoutChange={updateLayout} />
               <div className="canvas-caption"><span>Pré-visualização em tempo real</span><span>{activeFont?.family || "Sem fonte selecionada"}</span></div>
             </div>
             <aside className="studio-controls" aria-label="Ajustes do estudo">
@@ -538,7 +586,7 @@ export function FontManager() {
           ) : visibleItems.length === 0 ? (
             <div className="empty-state empty-state--small"><h3>Nada por aqui</h3><p>Experimenta outro filtro ou pesquisa. As composições Happy aparecem depois de guardares um coração num cartão.</p></div>
           ) : (
-            <div className={`font-grid${view === "list" ? " font-grid--list" : ""}`} style={{ "--font-cols": columns } as React.CSSProperties}>
+            <div className={`font-grid${view === "list" ? " font-grid--list" : ""}`} style={{ "--font-cols": activeColumns } as React.CSSProperties}>
               {visibleItems.map((item, index) => {
                 const { font, combo } = item
                 const comboTagline = combo?.t || tagline
@@ -552,11 +600,11 @@ export function FontManager() {
                   category={categoryFor(font.family, tags, categories)}
                   categories={categories}
                   view={view}
-                  fontSize={fontSize}
-                  fontWeight={fontWeight}
-                  taglineSize={taglineSize}
+                  fontSize={activeFontSize}
+                  fontWeight={activeFontWeight}
+                  taglineSize={activeTaglineSize}
                   taglineFontFamily={taglineFont}
-                  layout={layout}
+                  layout={activeLayout}
                   logoData={logoData}
                   favoriteName={favorites.includes(font.family)}
                   favoriteTagline={taglineFavorites.includes(font.family)}
