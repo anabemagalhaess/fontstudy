@@ -193,7 +193,7 @@ export function FontManager() {
       const list = [...families.values()].sort((a, b) => a.family.localeCompare(b.family, "pt-PT"))
       setFonts(list)
       if (!nameFont && list[0]) setNameFont(list[0].family)
-      setFontStatus(`${list.length} ${list.length === 1 ? "família encontrada" : "famílias encontradas"}")
+      setFontStatus(`${list.length} ${list.length === 1 ? "família encontrada" : "famílias encontradas"}`)
       if (!list.length) setNotice("Não foram encontradas fontes. Confirma as permissões do browser e tenta novamente.")
     } catch {
       setFontStatus("Sem permissão para ler as fontes. Autoriza o acesso no Chrome ou Edge e tenta novamente.")
@@ -204,8 +204,13 @@ export function FontManager() {
   const activeFont = fontMap.get(nameFont) || fonts[0]
   const selectedFamilies = view === "study" ? studyFamilies : fonts.map((font) => font.family)
   const normalizedQuery = query.trim().toLocaleLowerCase("pt-PT")
-  const visibleItems = useMemo(() => {
-    if (view === "study") return selectedFamilies
+  const visibleItems = useMemo<Array<{ font: FontFamily; combo?: FavoriteCombo }>>(() => {
+    if (view === "study") {
+      return selectedFamilies
+        .map((family) => fontMap.get(family))
+        .filter((font): font is FontFamily => Boolean(font))
+        .map((font) => ({ font, combo: undefined }))
+    }
     if (filter === "Composições") {
       return favoriteCombos
         .filter((combo) => !normalizedQuery || `${combo.n} ${combo.t}`.toLocaleLowerCase("pt-PT").includes(normalizedQuery))
@@ -484,9 +489,7 @@ export function FontManager() {
           ) : (
             <div className={`font-grid${view === "list" ? " font-grid--list" : ""}`} style={{ "--font-cols": columns } as React.CSSProperties}>
               {visibleItems.map((item, index) => {
-                const font = "font" in item ? item.font : undefined
-                const combo = "combo" in item ? item.combo : undefined
-                if (!font) return null
+                const { font, combo } = item
                 const comboTagline = combo?.t || tagline
                 const comboFont = combo?.n || font.family
                 const comboIsFavorite = favoriteCombos.some((saved) => saved.n === comboFont && saved.t === comboTagline)
