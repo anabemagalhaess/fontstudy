@@ -512,11 +512,34 @@ export function FontManager() {
   }
 
   const updateLayout = (key: keyof StudyLayout, value: number) => {
+    const guidePair = key === "guideTop"
+      ? { partner: "guideBottom" as const, min: 3, max: 97, partnerMin: 3, partnerMax: 97 }
+      : key === "guideBottom"
+        ? { partner: "guideTop" as const, min: 3, max: 97, partnerMin: 3, partnerMax: 97 }
+        : key === "guideLeft"
+          ? { partner: "guideRight" as const, min: 3, max: 47, partnerMin: 53, partnerMax: 97 }
+          : key === "guideRight"
+            ? { partner: "guideLeft" as const, min: 53, max: 97, partnerMin: 3, partnerMax: 47 }
+            : null
+
+    const update = (current: StudyLayout): StudyLayout => {
+      if (!guidePair) return { ...current, [key]: value }
+      const partnerValue = current[guidePair.partner]
+      const minDelta = Math.max(guidePair.min - current[key], guidePair.partnerMin - partnerValue)
+      const maxDelta = Math.min(guidePair.max - current[key], guidePair.partnerMax - partnerValue)
+      const delta = Math.max(minDelta, Math.min(maxDelta, value - current[key]))
+      return {
+        ...current,
+        [key]: Math.round((current[key] + delta) * 10) / 10,
+        [guidePair.partner]: Math.round((partnerValue + delta) * 10) / 10,
+      }
+    }
+
     if (view === "study") {
-      setStudySettings((current) => ({ ...current, layout: { ...current.layout, [key]: value } }))
+      setStudySettings((current) => ({ ...current, layout: update(current.layout) }))
       return
     }
-    setLayout((current) => ({ ...current, [key]: value }))
+    setLayout((current) => update(current))
   }
   const updateColumns = (value: number) => view === "study"
     ? setStudySettings((current) => ({ ...current, columns: value }))
@@ -531,9 +554,19 @@ export function FontManager() {
     ? setStudySettings((current) => ({ ...current, fontWeight: value }))
     : setFontWeight(value)
   const resetGuides = () => {
-    for (const key of ["guideTop", "guideName", "guideTagline", "guideBottom", "guideLeft", "guideRight"] as const) {
-      updateLayout(key, INITIAL_LAYOUT[key])
+    const guidePositions = {
+      guideTop: INITIAL_LAYOUT.guideTop,
+      guideName: INITIAL_LAYOUT.guideName,
+      guideTagline: INITIAL_LAYOUT.guideTagline,
+      guideBottom: INITIAL_LAYOUT.guideBottom,
+      guideLeft: INITIAL_LAYOUT.guideLeft,
+      guideRight: INITIAL_LAYOUT.guideRight,
     }
+    if (view === "study") {
+      setStudySettings((current) => ({ ...current, layout: { ...current.layout, ...guidePositions } }))
+      return
+    }
+    setLayout((current) => ({ ...current, ...guidePositions }))
   }
 
   const saveGuidePreset = () => {
@@ -565,21 +598,7 @@ export function FontManager() {
 
   const resetViewControls = () => {
     if (view === "study") {
-      setStudySettings((current) => ({
-        ...INITIAL_STUDY_SETTINGS,
-        layout: {
-          ...INITIAL_LAYOUT,
-          nameOffset: current.layout.nameOffset,
-          taglineOffset: current.layout.taglineOffset,
-          margin: current.layout.margin,
-          guideTop: current.layout.guideTop,
-          guideName: current.layout.guideName,
-          guideTagline: current.layout.guideTagline,
-          guideBottom: current.layout.guideBottom,
-          guideLeft: current.layout.guideLeft,
-          guideRight: current.layout.guideRight,
-        },
-      }))
+      setStudySettings(INITIAL_STUDY_SETTINGS)
       return
     }
     setColumns(5)
@@ -669,7 +688,7 @@ export function FontManager() {
             <aside className="studio-controls" aria-label="Ajustes do estudo">
               <div className="studio-control-heading"><div><p className="eyebrow">Ajustes manuais</p><h3>Composição</h3></div><button className={`guide-toggle${showGuides ? " is-active" : ""}`} aria-pressed={showGuides} onClick={() => setShowGuides((current) => !current)}>Linhas-guia</button></div>
               <label className="range-control range-control--wide"><span>Margem da área</span><input type="range" min="16" max="220" value={layout.margin} onChange={(event) => updateLayout("margin", Number(event.target.value))} /><output>{layout.margin}px</output></label>
-              <p className="control-note">As linhas são referências: arrasta os rótulos para as ajustar. Para reposicionar o texto na vertical, arrasta o nome ou a tagline; o logo não se move.</p>
+              <p className="control-note">As guias verdes movem-se em par; ajusta as duas linhas centrais individualmente. Arrasta os rótulos. Para reposicionar o texto, arrasta o nome ou a tagline; o logo não se move.</p>
               <button type="button" className="secondary-button guide-reset-button" onClick={resetGuides}>Repor linhas-guia</button>
               <details className="guide-preset-menu">
                 <summary>Preset de linhas</summary>

@@ -164,19 +164,21 @@
 
 .font-app {
   --ink: #191b20;
-  --cursor-color: #a5d9d3;
-  --cursor-foreground: #191b20;
+  --cursor-color: #c9d2bd;
+  --cursor-foreground: #373c33;
   --muted-ink: #727984;
   --line: #dce0e5;
   --paper: #ffffff;
   --subtle: #f4f6f7;
-  --mint: #bce7e2;
-  --mint-soft: #eaf7f5;
+  --mint: #b9c5ad;
+  --mint-soft: #eef1e9;
+  --guide-color: #aab99f;
   min-height: 100vh;
   background-color: #f7f3ed;
   background-image: url('/beige-paper-texture.png');
   background-position: center top;
-  background-size: cover;
+  background-size: 420px auto;
+  background-repeat: repeat;
   background-attachment: fixed;
   color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
@@ -187,8 +189,8 @@
 
 .font-app button, .font-app input, .font-app select { font: inherit; }
 .font-app button { color: inherit; }
-.font-app button:focus-visible, .font-app input:focus-visible, .font-app select:focus-visible { outline: 3px solid #b5e2dd; outline-offset: 2px; }
-.font-app--dark { --ink: #f2f3f4; --muted-ink: #a5abb4; --line: #3a3e45; --paper: #202329; --subtle: #292d34; --mint: #8bcfc7; --mint-soft: #263b3a; background: #17191d; }
+.font-app button:focus-visible, .font-app input:focus-visible, .font-app select:focus-visible { outline: 3px solid var(--cursor-color); outline-offset: 2px; }
+.font-app--dark { --ink: #f2f3f4; --muted-ink: #a5abb4; --line: #3a3e45; --paper: #202329; --subtle: #292d34; --cursor-color: #9ba88d; --cursor-foreground: #17191d; --mint: #8a9a7e; --mint-soft: #30372d; --guide-color: #8a9a7e; background: #17191d; }
 .font-app--dark .font-card, .font-app--dark .studio-canvas, .font-app--dark .manager-dialog { background: var(--paper); }
 .font-app--dark .header-input input, .font-app--dark .search-box input, .font-app--dark select, .font-app--dark .category-add input { background: var(--subtle); color: var(--ink); }
 .font-app--dark .lockup-preview__name, .font-app--dark .lockup-preview__tagline { color: var(--ink); }
@@ -298,12 +300,12 @@
 .preview-guide--name { top: var(--guide-name, 44%); }
 .preview-guide--tagline { top: var(--guide-tagline, 62%); }
 .preview-guide--bottom { top: var(--guide-bottom, 88%); }
-.preview-guide--top::before, .preview-guide--bottom::before { border-top-style: solid; border-color: #8fcac3; }
+.preview-guide--top::before, .preview-guide--bottom::before { border-top-style: solid; border-color: var(--guide-color); }
 .preview-guide--left { left: var(--guide-left, 8%); }
 .preview-guide--right { left: var(--guide-right, 92%); }
-.preview-guide--left::before, .preview-guide--right::before { border-left-style: solid; border-color: #8fcac3; }
+.preview-guide--left::before, .preview-guide--right::before { border-left-style: solid; border-color: var(--guide-color); }
 .lockup-preview__positionable { cursor: ns-resize; pointer-events: auto; touch-action: none; }
-.lockup-preview__positionable:focus-visible { outline: 2px solid #83bfb8; outline-offset: 4px; border-radius: 2px; }
+.lockup-preview__positionable:focus-visible { outline: 2px solid var(--cursor-color); outline-offset: 4px; border-radius: 2px; }
 .font-library { margin-top: 20px; }
 .library-section-heading { align-items: flex-end; padding-bottom: 12px; border-bottom: 1px solid var(--line); }
 .library-section-heading h2 { font-size: 22px; }
@@ -317,7 +319,7 @@
 .font-card__family { flex: 1 1 70px; min-width: 0; overflow: hidden; border: 0; background: transparent; padding: 0; color: var(--muted-ink) !important; cursor: pointer; font-size: 12px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .font-card__variant-select { flex: 0 1 106px; min-width: 72px; }
 .font-card__variant-select select { width: 100%; min-height: 28px; overflow: hidden; border: 1px solid var(--line); border-radius: 5px; background: var(--subtle); color: var(--muted-ink); padding: 0 18px 0 6px; font-size: 10px; text-overflow: ellipsis; }
-.font-card__variant-select select:focus-visible { outline: 2px solid #b5e2dd; outline-offset: 1px; }
+.font-card__variant-select select:focus-visible { outline: 2px solid var(--cursor-color); outline-offset: 1px; }
 .font-card__family:hover { color: var(--ink) !important; }
 .font-card__actions { display: flex; flex: 0 0 auto; align-items: center; gap: 3px; }
 .icon-button { display: inline-grid; flex: 0 0 auto; place-items: center; width: 30px; height: 30px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #929aa3 !important; cursor: pointer; transition: color 150ms ease, background 150ms ease, border-color 150ms ease; }
