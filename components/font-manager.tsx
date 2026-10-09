@@ -525,13 +525,13 @@ export function FontManager() {
     const update = (current: StudyLayout): StudyLayout => {
       if (!guidePair) return { ...current, [key]: value }
       const partnerValue = current[guidePair.partner]
-      const minDelta = Math.max(guidePair.min - current[key], guidePair.partnerMin - partnerValue)
-      const maxDelta = Math.min(guidePair.max - current[key], guidePair.partnerMax - partnerValue)
+      const minDelta = Math.max(guidePair.min - current[key], partnerValue - guidePair.partnerMax)
+      const maxDelta = Math.min(guidePair.max - current[key], partnerValue - guidePair.partnerMin)
       const delta = Math.max(minDelta, Math.min(maxDelta, value - current[key]))
       return {
         ...current,
         [key]: Math.round((current[key] + delta) * 10) / 10,
-        [guidePair.partner]: Math.round((partnerValue + delta) * 10) / 10,
+        [guidePair.partner]: Math.round((partnerValue - delta) * 10) / 10,
       }
     }
 
