@@ -78,7 +78,7 @@ export function FontCard({
   }
 
   return (
-    <article className={`font-card${selected ? " is-selected" : ""}`}>
+    <article className={`font-card${selected ? " is-selected" : ""}${view === "logo" ? " font-card--logo" : ""}`}>
       <div className="font-card__top">
         <button className="font-card__family" onClick={onSelect} title={`Usar ${font.family} no estudo`}>
           {font.family}
@@ -101,15 +101,6 @@ export function FontCard({
             <Star fill={favoriteName ? "currentColor" : "none"} />
           </button>
           <button
-            className={`icon-button text-favorite${favoriteTagline ? " is-active" : ""}`}
-            aria-label={`${favoriteTagline ? "Remover" : "Adicionar"} ${font.family} dos favoritos da tagline`}
-            aria-pressed={favoriteTagline}
-            title="Favorito da tagline"
-            onClick={onToggleTagline}
-          >
-            <Type />
-          </button>
-          <button
             className={`icon-button heart-button combo-heart${favoriteCombo ? " is-active" : ""}`}
             aria-label={`${favoriteCombo ? "Remover" : "Guardar"} composição ${font.family} e ${tagline || "tagline"}`}
             aria-pressed={favoriteCombo}
@@ -117,6 +108,15 @@ export function FontCard({
             onClick={onToggleCombo}
           >
             <Heart fill={favoriteCombo ? "currentColor" : "none"} />
+          </button>
+          <button
+            className={`icon-button text-favorite${favoriteTagline ? " is-active" : ""}`}
+            aria-label={`${favoriteTagline ? "Remover" : "Adicionar"} ${font.family} dos favoritos da tagline`}
+            aria-pressed={favoriteTagline}
+            title="Favorito da tagline"
+            onClick={onToggleTagline}
+          >
+            <Type />
           </button>
         </div>
       </div>
