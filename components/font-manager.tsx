@@ -34,7 +34,13 @@ const VIEW_OPTIONS: ViewOption[] = [
   { id: "study", label: "Logo Study" },
 ]
 const INITIAL_LAYOUT: StudyLayout = { logoSize: 128, logoGap: 24, logoOffset: 0, taglineGap: 22, nameOffset: 0, taglineOffset: 0, margin: 52, guideTop: 12, guideName: 44, guideTagline: 62, guideBottom: 88, guideLeft: 8, guideRight: 92 }
-const INITIAL_STUDY_SETTINGS: StudySettings = { columns: 5, layout: INITIAL_LAYOUT, fontSize: 58, taglineSize: 24, fontWeight: 400 }
+const INITIAL_STUDY_LAYOUT: StudyLayout = { ...INITIAL_LAYOUT, logoSize: 240 }
+const INITIAL_STUDY_SETTINGS: StudySettings = { columns: 5, layout: INITIAL_STUDY_LAYOUT, fontSize: 58, taglineSize: 24, fontWeight: 400 }
+const getStudyLayout = (savedLayout?: Partial<StudyLayout>): StudyLayout => {
+  const layout = { ...INITIAL_STUDY_LAYOUT, ...savedLayout }
+  if (savedLayout?.logoSize === INITIAL_LAYOUT.logoSize) layout.logoSize = INITIAL_STUDY_LAYOUT.logoSize
+  return layout
+}
 const GUIDE_PRESET_STORAGE_KEY = "fontes-logo-study-preset"
 const NOT_INSTALLED = "Não instaladas"
 const EMPTY_LIBRARY: FontLibrary = {
@@ -110,11 +116,11 @@ export function FontManager() {
       if (Array.isArray(preferences.studyFamilies)) setStudyFamilies(preferences.studyFamilies)
       if (preferences.layout && typeof preferences.layout === "object") setLayout({ ...INITIAL_LAYOUT, ...preferences.layout })
       if (preferences.studySettings && typeof preferences.studySettings === "object") {
-        setStudySettings({ ...INITIAL_STUDY_SETTINGS, ...preferences.studySettings, layout: { ...INITIAL_LAYOUT, ...preferences.studySettings.layout } })
+        setStudySettings({ ...INITIAL_STUDY_SETTINGS, ...preferences.studySettings, layout: getStudyLayout(preferences.studySettings.layout) })
       } else {
         setStudySettings({
           columns: preferences.columns ?? INITIAL_STUDY_SETTINGS.columns,
-          layout: { ...INITIAL_LAYOUT, ...preferences.layout },
+          layout: getStudyLayout(preferences.layout),
           fontSize: preferences.fontSize ?? INITIAL_STUDY_SETTINGS.fontSize,
           taglineSize: preferences.taglineSize ?? INITIAL_STUDY_SETTINGS.taglineSize,
           fontWeight: preferences.fontWeight ?? INITIAL_STUDY_SETTINGS.fontWeight,
@@ -154,11 +160,11 @@ export function FontManager() {
         if (Array.isArray(preferences.studyFamilies)) setStudyFamilies(preferences.studyFamilies)
         if (preferences.layout) setLayout({ ...INITIAL_LAYOUT, ...preferences.layout })
         if (preferences.studySettings) {
-          setStudySettings({ ...INITIAL_STUDY_SETTINGS, ...preferences.studySettings, layout: { ...INITIAL_LAYOUT, ...preferences.studySettings.layout } })
+          setStudySettings({ ...INITIAL_STUDY_SETTINGS, ...preferences.studySettings, layout: getStudyLayout(preferences.studySettings.layout) })
         } else {
           setStudySettings({
             columns: preferences.columns ?? INITIAL_STUDY_SETTINGS.columns,
-            layout: { ...INITIAL_LAYOUT, ...preferences.layout },
+            layout: getStudyLayout(preferences.layout),
             fontSize: preferences.fontSize ?? INITIAL_STUDY_SETTINGS.fontSize,
             taglineSize: preferences.taglineSize ?? INITIAL_STUDY_SETTINGS.taglineSize,
             fontWeight: preferences.fontWeight ?? INITIAL_STUDY_SETTINGS.fontWeight,

@@ -326,11 +326,8 @@
 .icon-button:hover { border-color: var(--line); background: var(--subtle); color: var(--ink) !important; }
 .icon-button svg { width: 16px; height: 16px; }
 .heart-button { color: #a0a6ad !important; }
-.heart-button.is-active, .name-star.is-active { color: #191b20 !important; }
-.font-app--dark .heart-button.is-active, .font-app--dark .name-star.is-active { color: #f2f3f4 !important; }
+.heart-button.is-active, .name-star.is-active, .combo-heart.is-active { color: #1c736d !important; }
 .combo-heart { color: #aeb4bb !important; }
-.combo-heart.is-active { color: #191b20 !important; }
-.font-app--dark .combo-heart.is-active { color: #f2f3f4 !important; }
 .text-favorite.is-active { border-color: var(--mint); background: var(--mint-soft); color: var(--ink) !important; }
 .font-card__preview-button { display: flex; flex: 1; min-width: 0; border: 0; background: transparent; padding: 0; cursor: pointer; }
 .font-card__preview-button .lockup-preview { width: 100%; min-height: 180px; }
