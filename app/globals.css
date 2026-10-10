@@ -324,13 +324,15 @@
 .font-card__variant-select select:focus-visible { outline: 2px solid var(--cursor-color); outline-offset: 1px; }
 .font-card__family:hover { color: var(--ink) !important; }
 .font-card__actions { display: flex; flex: 0 0 auto; align-items: center; gap: 3px; }
+.font-card__actions .name-star { order: 1; }
+.font-card__actions .combo-heart { order: 2; }
+.font-card__actions .text-favorite { order: 3; }
 .icon-button { display: inline-grid; flex: 0 0 auto; place-items: center; width: 30px; height: 30px; border: 1px solid transparent; border-radius: 6px; background: transparent; color: #929aa3 !important; cursor: pointer; transition: color 150ms ease, background 150ms ease, border-color 150ms ease; }
 .icon-button:hover { border-color: var(--line); background: var(--subtle); color: var(--ink) !important; }
 .icon-button svg { width: 16px; height: 16px; }
 .heart-button { color: #a0a6ad !important; }
-.heart-button.is-active, .name-star.is-active, .combo-heart.is-active, .text-favorite.is-active { color: var(--cursor-foreground) !important; }
+.heart-button.is-active, .name-star.is-active, .combo-heart.is-active, .text-favorite.is-active { border-color: var(--mint); background: var(--mint-soft); color: var(--cursor-foreground) !important; }
 .combo-heart { color: #aeb4bb !important; }
-.text-favorite.is-active { border-color: var(--mint); background: var(--mint-soft); }
 .font-card__preview-button { display: flex; flex: 1; min-width: 0; border: 0; background: transparent; padding: 0; cursor: pointer; }
 .font-card__preview-button .lockup-preview { width: 100%; min-height: 180px; }
 .font-card__footer { display: flex; align-items: flex-end; justify-content: space-between; gap: 6px; margin-top: auto; padding: 8px 9px 12px 10px; }
