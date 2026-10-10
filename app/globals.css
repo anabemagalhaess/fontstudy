@@ -194,8 +194,9 @@
 .font-app--dark .font-card, .font-app--dark .studio-canvas, .font-app--dark .manager-dialog { background: var(--paper); }
 .font-app--dark .header-input input, .font-app--dark .search-box input, .font-app--dark select, .font-app--dark .category-add input { background: var(--subtle); color: var(--ink); }
 .font-app--dark .lockup-preview__name, .font-app--dark .lockup-preview__tagline { color: var(--ink); }
-.font-app--study-mode:not(.font-app--dark) { background-color: #ffffff; background-image: none; }
-.font-app--study-mode:not(.font-app--dark) .studio-canvas { background-color: #ffffff; }
+.font-app--study-mode:not(.font-app--dark) { background-color: #f7f3ed; background-image: url('/beige-paper-texture.png'); }
+.font-app--study-mode:not(.font-app--dark) .studio-canvas { border-color: transparent; background-color: #f7f3ed; background-image: url('/beige-paper-texture.png'); padding: 12px; }
+.font-app--study-mode:not(.font-app--dark) .studio-canvas > .lockup-preview { border: 1px solid var(--line); border-radius: 10px; background: #ffffff; }
 
 .app-header { position: relative; z-index: 1; background: var(--paper); border-bottom: 1px solid var(--line); padding: 20px clamp(18px, 3vw, 48px) 16px; }
 .header-main { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
