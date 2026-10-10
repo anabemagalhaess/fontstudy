@@ -34,11 +34,11 @@ const VIEW_OPTIONS: ViewOption[] = [
   { id: "study", label: "Logo Study" },
 ]
 const INITIAL_LAYOUT: StudyLayout = { logoSize: 128, logoGap: 24, logoOffset: 0, taglineGap: 22, nameOffset: 0, taglineOffset: 0, margin: 52, guideTop: 12, guideName: 44, guideTagline: 62, guideBottom: 88, guideLeft: 8, guideRight: 92 }
-const INITIAL_STUDY_LAYOUT: StudyLayout = { ...INITIAL_LAYOUT, logoSize: 240 }
+const INITIAL_STUDY_LAYOUT: StudyLayout = { ...INITIAL_LAYOUT, logoSize: 270 }
 const INITIAL_STUDY_SETTINGS: StudySettings = { columns: 5, layout: INITIAL_STUDY_LAYOUT, fontSize: 58, taglineSize: 24, fontWeight: 400 }
 const getStudyLayout = (savedLayout?: Partial<StudyLayout>): StudyLayout => {
   const layout = { ...INITIAL_STUDY_LAYOUT, ...savedLayout }
-  if (savedLayout?.logoSize === INITIAL_LAYOUT.logoSize) layout.logoSize = INITIAL_STUDY_LAYOUT.logoSize
+  if (savedLayout?.logoSize === INITIAL_LAYOUT.logoSize || savedLayout?.logoSize === 240) layout.logoSize = INITIAL_STUDY_LAYOUT.logoSize
   return layout
 }
 const GUIDE_PRESET_STORAGE_KEY = "fontes-logo-study-preset"
